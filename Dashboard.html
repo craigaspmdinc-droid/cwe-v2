@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CWE Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #21262d;
+    --surface3: #30363d;
+    --border:   #30363d;
+    --accent:   #58a6ff;
+    --accent2:  #3fb950;
+    --warn:     #d29922;
+    --danger:   #f85149;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+
+  /* ══════════════════════════════════════════
+     APP SHELL
+  ══════════════════════════════════════════ */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .topbar-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .app-eyebrow {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  .app-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+
+  .topbar-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .user-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .user-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 7px;
+    border-radius: 99px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-admin    { background: rgba(210,153,34,0.15); color: var(--warn);   border: 1px solid rgba(210,153,34,0.3); }
+  .badge-analyst  { background: rgba(88,166,255,0.12); color: var(--accent); border: 1px solid rgba(88,166,255,0.25); }
+
+  /* ── ACCENT LINE ── */
+  #accent-line {
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 60%, transparent 100%);
+    flex-shrink: 0;
+  }
+
+  /* ── SCROLLABLE CONTENT ── */
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 14px 24px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface3) transparent;
+  }
+  #content::-webkit-scrollbar { width: 4px; }
+  #content::-webkit-scrollbar-track { background: transparent; }
+  #content::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  /* ── BOTTOM BAR ── */
+  #bottombar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ══════════════════════════════════════════
+     LOG NEW ISSUE BUTTON
+  ══════════════════════════════════════════ */
+  #btn-log-new {
+    width: 100%;
+    padding: 11px 16px;
+    background: var(--accent);
+    color: #0d1117;
+    border: none;
+    border-radius: 7px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    margin-bottom: 16px;
+    letter-spacing: 0.1px;
+    box-shadow: 0 2px 8px rgba(88,166,255,0.25);
+  }
+  #btn-log-new:hover {
+    background: #79c0ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(88,166,255,0.35);
+  }
+  #btn-log-new:active { transform: translateY(0); box-shadow: none; }
+  .btn-plus {
+    width: 18px; height: 18px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; line-height: 1;
+  }
+
+  /* ══════════════════════════════════════════
+     SECTION LABELS  (matches Training Center)
+  ══════════════════════════════════════════ */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ══════════════════════════════════════════
+     METRIC CARDS
+  ══════════════════════════════════════════ */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 13px 14px 11px;
+    transition: border-color 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .mc-blue::before   { background: var(--accent);  }
+  .mc-red::before    { background: var(--danger);  }
+  .mc-yellow::before { background: var(--warn);    }
+  .mc-green::before  { background: var(--accent2); }
+
+  .mc-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+  .mc-value {
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  .mc-sub { font-size: 11px; color: var(--muted); line-height: 1.3; }
+
+  .mc-blue   .mc-value { color: var(--accent);  }
+  .mc-red    .mc-value { color: var(--danger);  }
+  .mc-yellow .mc-value { color: var(--warn);    }
+  .mc-green  .mc-value { color: var(--accent2); }
+
+  /* ══════════════════════════════════════════
+     BREAKDOWN CARDS  (matches Training .card)
+  ══════════════════════════════════════════ */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .breakdown-row:last-child { margin-bottom: 0; }
+
+  .br-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    width: 86px;
+    flex-shrink: 0;
+  }
+  .br-track {
+    flex: 1;
+    height: 5px;
+    background: var(--surface3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .br-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.9s cubic-bezier(0.4,0,0.2,1);
+  }
+  .br-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    width: 20px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ══════════════════════════════════════════
+     DIVIDER
+  ══════════════════════════════════════════ */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  /* ══════════════════════════════════════════
+     MY QUEUE
+  ══════════════════════════════════════════ */
+  .queue-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .queue-pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 2px 9px;
+    border-radius: 99px;
+  }
+  .queue-pill.has-items {
+    background: rgba(88,166,255,0.1);
+    border-color: rgba(88,166,255,0.3);
+    color: var(--accent);
+  }
+
+  /* Claim rows */
+  .claim-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 13px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    position: relative;
+  }
+  .claim-item:hover {
+    border-color: var(--accent);
+    background: rgba(88,166,255,0.04);
+    transform: translateX(2px);
+  }
+  .claim-item:last-child { margin-bottom: 0; }
+
+  .ci-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+  .ci-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* priority badges — match Training Center .tag system */
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-family: var(--mono); font-weight: 600; }
+  .tag-red    { background: rgba(248,81,73,0.15);  color: var(--danger); }
+  .tag-yellow { background: rgba(210,153,34,0.15); color: var(--warn);   }
+  .tag-blue   { background: rgba(88,166,255,0.12); color: var(--accent); }
+  .tag-green  { background: rgba(63,185,80,0.12);  color: var(--accent2);}
+  .tag-muted  { background: var(--surface3);        color: var(--muted);  }
+
+  .ci-practice {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 16px;
+  }
+  .ci-bot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .ci-meta { font-size: 11px; color: var(--muted); }
+
+  .ci-arrow {
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--surface3);
+    font-size: 15px;
+    transition: color 0.15s, right 0.15s;
+    pointer-events: none;
+  }
+  .claim-item:hover .ci-arrow { color: var(--accent); right: 9px; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 26px 14px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+  .es-icon  { font-size: 28px; margin-bottom: 8px; }
+  .es-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .es-desc  { font-size: 12px; color: var(--muted); }
+
+  /* ══════════════════════════════════════════
+     BOTTOM BAR BUTTONS
+  ══════════════════════════════════════════ */
+  .btn-sec {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    text-align: center;
+  }
+  .btn-sec:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ══════════════════════════════════════════
+     LOADING SCREEN
+  ══════════════════════════════════════════ */
+  #loading {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; z-index: 999;
+  }
+  .ld-logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .ld-subtitle {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: -10px;
+  }
+  .ld-bar {
+    width: 120px; height: 2px;
+    background: var(--surface3);
+    border-radius: 1px; overflow: hidden;
+  }
+  .ld-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    animation: ldpulse 1.4s ease-in-out infinite;
+  }
+  @keyframes ldpulse {
+    0%   { width:0%;  margin-left:0;    }
+    50%  { width:70%; margin-left:15%;  }
+    100% { width:0%;  margin-left:100%; }
+  }
+
+  /* ══════════════════════════════════════════
+     ERROR CALLOUT  (matches Training .callout)
+  ══════════════════════════════════════════ */
+  .callout {
+    border-radius: 6px; padding: 11px 13px;
+    margin-bottom: 12px; font-size: 12px;
+    display: flex; gap: 9px; align-items: flex-start;
+  }
+  .callout-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+  .callout.danger { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); color: #ffa198; }
+  .callout.info   { background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.3); color: #cdd9e5; }
+
+  /* ══════════════════════════════════════════
+     TIMESTAMP
+  ══════════════════════════════════════════ */
+  .ts {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .live-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: livepulse 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+  /* ══════════════════════════════════════════
+     ANIMATIONS
+  ══════════════════════════════════════════ */
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(6px); }
+    to   { opacity:1; transform:translateY(0);   }
+  }
+  .fu { opacity: 0; }
+  .fu1 { animation: fadeUp 0.35s 0.00s ease forwards; }
+  .fu2 { animation: fadeUp 0.35s 0.07s ease forwards; }
+  .fu3 { animation: fadeUp 0.35s 0.13s ease forwards; }
+  .fu4 { animation: fadeUp 0.35s 0.19s ease forwards; }
+  .fu5 { animation: fadeUp 0.35s 0.25s ease forwards; }
+  .fu6 { animation: fadeUp 0.35s 0.31s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     LOADING
+══════════════════════════════════════════ -->
+<div id="loading">
+  <div class="ld-logo">CWE V2.4</div>
+  <div class="ld-subtitle">Claims Workflow Engine</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     APP SHELL
+══════════════════════════════════════════ -->
+<div id="app" style="display:none;">
+
+  <!-- Top Bar -->
+  <div id="topbar">
+    <div class="topbar-left">
+      <div class="app-eyebrow">Claims Workflow Engine</div>
+      <div class="app-title">Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-name" id="hdr-name">—</div>
+      <div id="hdr-badge"></div>
+    </div>
+  </div>
+
+  <!-- Accent line -->
+  <div id="accent-line"></div>
+
+  <!-- Scrollable content -->
+  <div id="content">
+
+    <div id="error-area"></div>
+
+    <!-- Log New Issue -->
+    <button id="btn-log-new" class="fu fu1" onclick="logNewIssue()">
+      <span class="btn-plus">＋</span>
+      Log New Issue
+    </button>
+
+    <!-- ── METRICS ── -->
+    <div class="section-label fu fu2">Overview</div>
+    <div class="metrics-grid fu fu2">
+      <div class="metric-card mc-blue">
+        <div class="mc-label">Total Open</div>
+        <div class="mc-value" id="m-total">—</div>
+        <div class="mc-sub"  id="m-total-sub">&nbsp;</div>
+      </div>
+      <div class="metric-card mc-red">
+        <div class="mc-label">Critical / High</div>
+        <div class="mc-value" id="m-crit">—</div>
+        <div class="mc-sub"  id="m-crit-sub">&nbsp;</div>
+      </div>
+      <div class="metric-card mc-yellow">
+        <div class="mc-label">Escalated</div>
+        <div class="mc-value" id="m-esc">—</div>
+        <div class="mc-sub">awaiting review</div>
+      </div>
+      <div class="metric-card mc-green">
+        <div class="mc-label">$ Variance</div>
+        <div class="mc-value" id="m-var">—</div>
+        <div class="mc-sub">open exposure</div>
+      </div>
+    </div>
+
+    <!-- ── BY STAGE ── -->
+    <div class="card fu fu3">
+      <div class="card-title">📊 By Stage</div>
+      <div id="stage-rows"></div>
+    </div>
+
+    <!-- ── BY PRIORITY ── -->
+    <div class="card fu fu4">
+      <div class="card-title">🎯 By Priority</div>
+      <div id="pri-rows"></div>
+    </div>
+
+    <hr class="divider fu fu5">
+
+    <!-- ── MY QUEUE ── -->
+    <div class="fu fu5">
+      <div class="queue-header">
+        <div class="section-label" style="margin:0; border:none; padding:0;">My Open Claims</div>
+        <div class="queue-pill" id="queue-pill">0</div>
+      </div>
+      <div id="queue-list" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- Timestamp -->
+    <div class="ts fu fu6" id="ts"></div>
+
+  </div><!-- /#content -->
+
+  <!-- Bottom Bar -->
+  <div id="bottombar">
+    <button class="btn-sec" onclick="doRefresh()">↺ &nbsp;Refresh</button>
+    <button class="btn-sec" onclick="viewAllClaims()">All Claims &nbsp;↗</button>
+  </div>
+
+</div><!-- /#app -->
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════
+var STAGE_COLORS = {
+  'NEW':          '#58a6ff',
+  'WORKING':      '#d29922',
+  'ESCALATED':    '#f85149',
+  'APPEALED':     '#3fb950',
+  'PENDING':      '#8b949e',
+  'PENDING INFO': '#8b949e'
+};
+var PRI_COLORS = {
+  'CRITICAL': '#f85149',
+  'HIGH':     '#d29922',
+  'MEDIUM':   '#58a6ff',
+  'LOW':      '#3fb950'
+};
+var PRI_ORDER = ['CRITICAL','HIGH','MEDIUM','LOW'];
+
+// Priority → tag class
+function priTagClass(p) {
+  var map = { 'CRITICAL':'tag-red', 'HIGH':'tag-yellow', 'MEDIUM':'tag-blue', 'LOW':'tag-green' };
+  return map[(p||'').toUpperCase()] || 'tag-muted';
+}
+// Stage → tag class
+function stageTagClass(s) {
+  var map = { 'NEW':'tag-blue', 'WORKING':'tag-yellow', 'ESCALATED':'tag-red', 'APPEALED':'tag-green', 'PENDING':'tag-muted', 'PENDING INFO':'tag-muted' };
+  return map[(s||'').toUpperCase()] || 'tag-muted';
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  google.script.run
+    .withSuccessHandler(render)
+    .withFailureHandler(onError)
+    .getDashboardData();
+});
+
+function doRefresh() {
+  var content = document.getElementById('content');
+  content.style.opacity = '0.4';
+  content.style.transition = 'opacity 0.2s';
+  google.script.run
+    .withSuccessHandler(function(d) {
+      content.style.opacity = '1';
+      render(d);
+    })
+    .withFailureHandler(function(e) {
+      content.style.opacity = '1';
+      onError(e);
+    })
+    .getDashboardData();
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════
+function render(d) {
+  hideLoading();
+
+  // ── Header ──
+  document.getElementById('hdr-name').textContent = d.userName || '—';
+  var isAdmin = (d.userLevel === 'Admin');
+  document.getElementById('hdr-badge').innerHTML =
+    '<span class="user-badge ' + (isAdmin ? 'badge-admin' : 'badge-analyst') + '">' +
+    esc(d.userLevel || 'Analyst') + (d.userGroup ? ' · ' + esc(d.userGroup) : '') +
+    '</span>';
+
+  // ── Metrics ──
+  var total = d.totalOpen     || 0;
+  var crit  = d.criticalHigh  || 0;
+  var escN  = d.escalatedCount || 0;
+
+  set('m-total', total);
+  set('m-total-sub', total === 1 ? '1 open claim' : total + ' open claims');
+  set('m-crit',  crit);
+  set('m-crit-sub', crit === 0 ? 'none flagged' : crit + ' flagged');
+  set('m-esc',   escN);
+  set('m-var',   fmtDollars(d.totalVariance));
+
+  // ── Stage breakdown ──
+  renderBreakdown('stage-rows', d.byStageCounts || {}, STAGE_COLORS, null);
+
+  // ── Priority breakdown ──
+  renderBreakdown('pri-rows', d.byPriorityCounts || {}, PRI_COLORS, PRI_ORDER);
+
+  // ── Queue ──
+  renderQueue(d.myQueue || []);
+
+  // ── Timestamp ──
+  var now = new Date();
+  document.getElementById('ts').innerHTML =
+    '<span class="live-dot"></span>' +
+    'Updated ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+  // Show app
+  document.getElementById('app').style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════════════
+// BREAKDOWN
+// ══════════════════════════════════════════════════════
+function renderBreakdown(elId, counts, colorMap, order) {
+  var el   = document.getElementById(elId);
+  var keys = order
+    ? order.filter(function(k){ return (counts[k]||0) > 0; })
+    : Object.keys(counts).sort(function(a,b){ return (counts[b]||0)-(counts[a]||0); });
+
+  if (keys.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px 0;">No data.</div>';
+    return;
+  }
+
+  var total = keys.reduce(function(s,k){ return s+(counts[k]||0); }, 0) || 1;
+  el.innerHTML = keys.map(function(k) {
+    var cnt   = counts[k] || 0;
+    var pct   = Math.round(cnt / total * 100);
+    var color = colorMap[k.toUpperCase()] || '#8b949e';
+    return '<div class="breakdown-row">' +
+      '<div class="br-label">' + esc(k) + '</div>' +
+      '<div class="br-track"><div class="br-fill" style="width:0%;background:' + color + ';" data-w="' + pct + '"></div></div>' +
+      '<div class="br-count">' + cnt + '</div>' +
+    '</div>';
+  }).join('');
+
+  // Animate bars after paint
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      el.querySelectorAll('.br-fill').forEach(function(bar) {
+        bar.style.width = bar.getAttribute('data-w') + '%';
+      });
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// MY QUEUE
+// ══════════════════════════════════════════════════════
+function renderQueue(queue) {
+  var pill = document.getElementById('queue-pill');
+  pill.textContent = queue.length;
+  if (queue.length > 0) pill.classList.add('has-items');
+  else pill.classList.remove('has-items');
+
+  var el = document.getElementById('queue-list');
+
+  if (queue.length === 0) {
+    el.innerHTML =
+      '<div class="empty-state">' +
+        '<div class="es-icon">✅</div>' +
+        '<div class="es-title">Queue is clear</div>' +
+        '<div class="es-desc">No open claims assigned to you.</div>' +
+      '</div>';
+    return;
+  }
+
+  el.innerHTML = queue.map(function(c) {
+    var priCls   = priTagClass(c.priority);
+    var stageCls = stageTagClass(c.stage);
+    var aging    = c.agingDays != null ? c.agingDays + 'd old' : '';
+    var amt      = c.amount ? fmtDollars(c.amount) : '';
+
+    return '<div class="claim-item" onclick="openClaim(' + c.row + ')">' +
+      '<div class="ci-top">' +
+        '<div class="ci-id">' + esc(c.claimId || 'ROW-' + c.row) + '</div>' +
+        (c.priority ? '<span class="tag ' + priCls + '">' + esc(c.priority) + '</span>' : '') +
+      '</div>' +
+      '<div class="ci-practice">' + esc(c.practice || c.payer || '—') + '</div>' +
+      '<div class="ci-bot">' +
+        '<span class="tag ' + stageCls + '">' + esc(c.stage || '—') + '</span>' +
+        (c.payer && c.practice ? '<span class="ci-meta">· ' + esc(c.payer) + '</span>' : '') +
+        (aging  ? '<span class="ci-meta">· ' + aging  + '</span>' : '') +
+        (amt    ? '<span class="ci-meta">· ' + amt    + '</span>' : '') +
+      '</div>' +
+      '<div class="ci-arrow">›</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════════════════
+function logNewIssue() {
+  google.script.run.showNewIssueForm();
+}
+function openClaim(row) {
+  google.script.run.openWorkflowSidebarByRow(row);
+}
+function viewAllClaims() {
+  google.script.run.dashboardActivateClaimsSheet();
+}
+
+// ══════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════
+function hideLoading() {
+  var el = document.getElementById('loading');
+  if (!el) return;
+  el.style.opacity = '0';
+  el.style.transition = 'opacity 0.35s';
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 380);
+}
+
+function onError(err) {
+  hideLoading();
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('error-area').innerHTML =
+    '<div class="callout danger">' +
+      '<span class="callout-icon">⚠️</span>' +
+      '<div>' + esc(err.message || String(err)) + '</div>' +
+    '</div>';
+}
+
+function set(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function fmtDollars(v) {
+  var n = parseFloat(v);
+  if ((!v && v !== 0) || isNaN(n)) return '—';
+  if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return '$' + (n/1000).toFixed(1) + 'K';
+  return '$' + n.toFixed(0);
+}
+
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

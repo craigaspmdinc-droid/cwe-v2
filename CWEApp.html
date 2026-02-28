@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CWE V2.4</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #21262d;
+    --surface3: #30363d;
+    --border:   #30363d;
+    --accent:   #58a6ff;
+    --accent2:  #3fb950;
+    --warn:     #d29922;
+    --danger:   #f85149;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%; width: 100%;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+
+  /* ══════════════════════════════════════════
+     APP SHELL
+  ══════════════════════════════════════════ */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 14px;
+    height: 50px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .tb-left  { display: flex; align-items: center; gap: 10px; }
+  .tb-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+
+  #btn-back {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 9px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #btn-back:hover { border-color: var(--accent); color: var(--accent); }
+
+  .app-eyebrow {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  .app-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .user-name  { font-size: 11px; font-weight: 600; color: var(--text); }
+  .user-badge {
+    font-family: var(--mono); font-size: 9px; padding: 1px 6px;
+    border-radius: 99px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .badge-admin   { background: rgba(210,153,34,0.15); color: var(--warn);   border: 1px solid rgba(210,153,34,0.3); }
+  .badge-analyst { background: rgba(88,166,255,0.12); color: var(--accent); border: 1px solid rgba(88,166,255,0.25); }
+
+  /* ── ACCENT LINE ── */
+  .accent-line {
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 60%, transparent 100%);
+    flex-shrink: 0;
+  }
+
+  /* ── VIEWS ── */
+  .view {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+  .view.active { display: flex; }
+
+  .view-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 14px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface3) transparent;
+  }
+  .view-scroll::-webkit-scrollbar { width: 4px; }
+  .view-scroll::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  /* ── BOTTOM BAR ── */
+  #bottombar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 9px 14px;
+    display: flex;
+    gap: 7px;
+    flex-shrink: 0;
+  }
+  .btn-sec {
+    flex: 1; padding: 8px 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; font-family: var(--sans); font-size: 12px;
+    font-weight: 600; color: var(--muted); cursor: pointer;
+    transition: border-color 0.15s, color 0.15s; text-align: center;
+  }
+  .btn-sec:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ══════════════════════════════════════════
+     LOADING
+  ══════════════════════════════════════════ */
+  #loading {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 13px; z-index: 999;
+  }
+  .ld-logo { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
+  .ld-sub  { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: -9px; }
+  .ld-bar  { width: 110px; height: 2px; background: var(--surface3); border-radius: 1px; overflow: hidden; }
+  .ld-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); animation: ldp 1.4s ease-in-out infinite; }
+  @keyframes ldp { 0%{width:0%;margin-left:0} 50%{width:70%;margin-left:15%} 100%{width:0%;margin-left:100%} }
+
+  /* ══════════════════════════════════════════
+     SHARED COMPONENTS
+  ══════════════════════════════════════════ */
+  .section-label {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 15px; margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    margin-bottom: 11px; display: flex; align-items: center; gap: 7px;
+  }
+
+  /* tags — identical to Training Center */
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-family: var(--mono); font-weight: 600; }
+  .tag-red    { background: rgba(248,81,73,0.15);  color: var(--danger); }
+  .tag-yellow { background: rgba(210,153,34,0.15); color: var(--warn);   }
+  .tag-blue   { background: rgba(88,166,255,0.12); color: var(--accent); }
+  .tag-green  { background: rgba(63,185,80,0.12);  color: var(--accent2);}
+  .tag-muted  { background: var(--surface3);        color: var(--muted);  }
+  .tag-purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+
+  /* callouts — identical to Training Center */
+  .callout {
+    border-radius: 6px; padding: 11px 13px; margin: 10px 0; font-size: 12px;
+    display: flex; gap: 9px; align-items: flex-start;
+  }
+  .callout-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+  .callout.info    { background: rgba(88,166,255,0.1);  border: 1px solid rgba(88,166,255,0.3);  color: #cdd9e5; }
+  .callout.success { background: rgba(63,185,80,0.1);   border: 1px solid rgba(63,185,80,0.3);   color: #7ee787; }
+  .callout.warn    { background: rgba(210,153,34,0.1);  border: 1px solid rgba(210,153,34,0.3);  color: #e3b341; }
+  .callout.danger  { background: rgba(248,81,73,0.1);   border: 1px solid rgba(248,81,73,0.3);   color: #ffa198; }
+  .callout.action  { background: rgba(210,153,34,0.08); border: 1px solid rgba(210,153,34,0.35); color: #e3b341; }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  /* ══════════════════════════════════════════
+     VIEW 1: DASHBOARD
+  ══════════════════════════════════════════ */
+  #btn-log-new {
+    width: 100%; padding: 11px 16px;
+    background: var(--accent); color: #0d1117;
+    border: none; border-radius: 7px; font-family: var(--sans);
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(88,166,255,0.2);
+  }
+  #btn-log-new:hover { background: #79c0ff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(88,166,255,0.3); }
+  #btn-log-new:active { transform: translateY(0); }
+
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
+  .metric-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 13px 10px;
+    position: relative; overflow: hidden;
+  }
+  .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .mc-blue::before { background: var(--accent); }  .mc-blue .mc-value { color: var(--accent); }
+  .mc-red::before  { background: var(--danger); }  .mc-red  .mc-value { color: var(--danger); }
+  .mc-warn::before { background: var(--warn);   }  .mc-warn .mc-value { color: var(--warn);   }
+  .mc-grn::before  { background: var(--accent2);}  .mc-grn  .mc-value { color: var(--accent2);}
+  .mc-label { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+  .mc-value { font-family: var(--mono); font-size: 28px; font-weight: 600; line-height: 1; margin-bottom: 3px; }
+  .mc-sub   { font-size: 11px; color: var(--muted); line-height: 1.3; }
+
+  .breakdown-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .breakdown-row:last-child { margin-bottom: 0; }
+  .br-label { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 84px; flex-shrink: 0; }
+  .br-track { flex: 1; height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .br-fill  { height: 100%; border-radius: 3px; transition: width 0.9s cubic-bezier(0.4,0,0.2,1); }
+  .br-count { font-family: var(--mono); font-size: 11px; font-weight: 600; width: 20px; text-align: right; flex-shrink: 0; }
+  .br-arrow { font-size: 13px; color: var(--surface3); margin-left: 2px; transition: color 0.15s; }
+  .breakdown-clickable { cursor: pointer; border-radius: 5px; padding: 3px 4px; margin: -3px -4px; transition: background 0.15s; }
+  .breakdown-clickable:hover { background: rgba(88,166,255,0.08); }
+  .breakdown-clickable:hover .br-arrow { color: var(--accent); }
+  .breakdown-active { background: rgba(88,166,255,0.1) !important; }
+  .breakdown-active .br-label { color: var(--accent); font-weight: 700; }
+  .breakdown-active .br-arrow { color: var(--accent); }
+
+  .filter-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(88,166,255,0.12); border: 1px solid rgba(88,166,255,0.3);
+    border-radius: 99px; padding: 3px 10px 3px 10px;
+    font-family: var(--mono); font-size: 10px; color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .filter-pill-x {
+    cursor: pointer; font-size: 14px; line-height: 1;
+    color: var(--muted); transition: color 0.15s;
+  }
+  .filter-pill-x:hover { color: var(--danger); }
+
+  .queue-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .queue-pill {
+    font-family: var(--mono); font-size: 10px; background: var(--surface2);
+    border: 1px solid var(--border); color: var(--muted); padding: 2px 8px; border-radius: 99px;
+  }
+  .queue-pill.live { background: rgba(88,166,255,0.1); border-color: rgba(88,166,255,0.3); color: var(--accent); }
+
+  .claim-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; padding: 10px 12px; margin-bottom: 5px;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    position: relative;
+  }
+  .claim-item:hover { border-color: var(--accent); background: rgba(88,166,255,0.04); transform: translateX(2px); }
+  .claim-item:last-child { margin-bottom: 0; }
+  .ci-top  { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
+  .ci-id   { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; }
+  .ci-mid  { font-size: 12px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 16px; }
+  .ci-bot  { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .ci-meta { font-size: 11px; color: var(--muted); }
+  .ci-arrow { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--surface3); font-size: 15px; transition: color 0.15s, right 0.15s; pointer-events: none; }
+  .claim-item:hover .ci-arrow { color: var(--accent); right: 8px; }
+
+  .empty-state { text-align: center; padding: 22px 14px; border: 1px dashed var(--border); border-radius: 8px; background: var(--surface); }
+  .es-icon  { font-size: 26px; margin-bottom: 6px; }
+  .es-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .es-desc  { font-size: 12px; color: var(--muted); }
+
+  .ts { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); animation: livep 2.5s ease-in-out infinite; flex-shrink: 0; }
+  @keyframes livep { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+  /* ══════════════════════════════════════════
+     VIEW 2: WORKFLOW
+  ══════════════════════════════════════════ */
+
+  /* Claim header */
+  .claim-header {
+    border-radius: 8px; padding: 14px 15px;
+    margin-bottom: 10px; border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left-width: 3px;
+  }
+  .claim-header-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 8px; margin-bottom: 8px;
+  }
+  .claim-issue-id { font-family: var(--mono); font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+  .claim-meta-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12px; }
+  .cm-key   { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .cm-val   { color: var(--text); }
+
+  /* CARC action banner */
+  .carc-action {
+    background: rgba(210,153,34,0.08); border: 1px solid rgba(210,153,34,0.35);
+    border-radius: 6px; padding: 9px 11px; margin: 8px 0; font-size: 12px;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .carc-action-icon { color: var(--warn); flex-shrink: 0; font-size: 13px; margin-top: 1px; }
+  .carc-action-text { color: #e3b341; line-height: 1.5; }
+  .carc-action strong { color: var(--warn); }
+
+  /* Payer / MAC intel */
+  .intel-card {
+    background: rgba(88,166,255,0.06); border: 1px solid rgba(88,166,255,0.2);
+    border-radius: 7px; padding: 11px 13px; margin: 8px 0; font-size: 12px;
+  }
+  .intel-title { font-family: var(--mono); font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; font-weight: 600; }
+  .intel-row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+  .intel-row:last-child { margin-bottom: 0; }
+  .intel-key { color: var(--muted); }
+  .intel-val { color: var(--text); font-weight: 600; text-align: right; }
+  .intel-val.warn   { color: var(--warn); }
+  .intel-val.danger { color: var(--danger); }
+  .intel-val.ok     { color: var(--accent2); }
+
+  .mac-item { background: var(--surface2); border-radius: 6px; padding: 9px 11px; margin-bottom: 6px; }
+  .mac-item:last-child { margin-bottom: 0; }
+  .mac-type { font-family: var(--mono); font-size: 9px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; }
+  .mac-name { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .mac-juris { font-size: 11px; color: var(--muted); }
+  .mac-phone { font-size: 11px; color: var(--accent); text-decoration: none; }
+  .mac-phone:hover { text-decoration: underline; }
+
+  /* Claim nav dropdown */
+  .claim-nav { display: flex; gap: 7px; margin-bottom: 10px; }
+  .claim-nav select {
+    flex: 1; padding: 8px 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-family: var(--sans); font-size: 12px;
+    outline: none; cursor: pointer;
+  }
+  .claim-nav select:focus { border-color: var(--accent); }
+  .claim-nav-btn {
+    padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; font-family: var(--sans); font-size: 12px; font-weight: 600;
+    color: var(--muted); cursor: pointer; white-space: nowrap; transition: border-color 0.15s, color 0.15s;
+  }
+  .claim-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Progress bar */
+  .progress-bar { display: flex; align-items: center; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+  .progress-step { display: flex; flex-direction: column; align-items: center; min-width: 54px; position: relative; }
+  .progress-step .dot {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--surface2);
+    border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: var(--muted); z-index: 1;
+  }
+  .progress-step.completed .dot { background: var(--accent2); border-color: var(--accent2); color: var(--bg); }
+  .progress-step.current   .dot { background: var(--accent);  border-color: var(--accent);  color: var(--bg); box-shadow: 0 0 0 3px rgba(88,166,255,0.2); }
+  .progress-step .step-label { font-size: 9px; color: var(--muted); text-align: center; margin-top: 4px; max-width: 54px; line-height: 1.3; }
+  .progress-step.completed .step-label { color: var(--accent2); }
+  .progress-step.current   .step-label { color: var(--accent);  font-weight: 700; }
+  .progress-connector { flex: 1; height: 2px; background: var(--border); margin-bottom: 16px; min-width: 10px; }
+  .progress-connector.completed { background: var(--accent2); }
+
+  /* Workflow options */
+  .wf-option {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 11px 13px; margin-bottom: 7px;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  }
+  .wf-option:hover { border-color: var(--accent); background: rgba(88,166,255,0.06); transform: translateX(2px); }
+  .wf-option:last-child { margin-bottom: 0; }
+  .wf-opt-label { font-weight: 600; font-size: 13px; color: var(--text); }
+  .wf-opt-desc  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* Workflow action buttons */
+  .wf-btn {
+    width: 100%; padding: 10px 14px; border: none; border-radius: 6px;
+    font-family: var(--sans); font-size: 12px; font-weight: 600;
+    cursor: pointer; margin-top: 7px; transition: all 0.15s;
+  }
+  .wf-btn-primary   { background: var(--accent);  color: #0d1117; }
+  .wf-btn-primary:hover { background: #79c0ff; transform: translateY(-1px); }
+  .wf-btn-success   { background: var(--accent2); color: #0d1117; }
+  .wf-btn-success:hover { background: #56d364; transform: translateY(-1px); }
+  .wf-btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .wf-btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Research forms */
+  .wf-input {
+    width: 100%; padding: 8px 10px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+    font-family: var(--sans); font-size: 12px; outline: none; margin-bottom: 8px;
+  }
+  .wf-input:focus { border-color: var(--accent); }
+  .wf-label { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; display: block; }
+  select.wf-input { cursor: pointer; }
+  textarea.wf-input { resize: vertical; min-height: 60px; }
+
+  /* Activity log */
+  #activityNote {
+    width: 100%; padding: 9px 10px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+    font-family: var(--sans); font-size: 12px; outline: none;
+    resize: vertical; min-height: 70px; line-height: 1.5;
+  }
+  #activityNote:focus { border-color: var(--accent); }
+  #activityNote::placeholder { color: var(--muted); }
+
+  /* Quick actions selects */
+  .qa-select {
+    width: 100%; padding: 8px 10px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+    font-family: var(--sans); font-size: 12px; outline: none; margin-bottom: 6px; cursor: pointer;
+  }
+  .qa-select:focus { border-color: var(--accent); }
+  .qa-label { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; margin-top: 10px; display: block; }
+
+  /* Workflow loading spinner */
+  #wf-loading {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 40px 20px; gap: 12px;
+  }
+  .wf-spinner {
+    width: 28px; height: 28px; border: 2px solid var(--surface3);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Animations */
+  @keyframes fadeUp { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+  .fu  { opacity: 0; }
+  .fu1 { animation: fadeUp 0.3s 0.00s ease forwards; }
+  .fu2 { animation: fadeUp 0.3s 0.06s ease forwards; }
+  .fu3 { animation: fadeUp 0.3s 0.12s ease forwards; }
+  .fu4 { animation: fadeUp 0.3s 0.18s ease forwards; }
+  .fu5 { animation: fadeUp 0.3s 0.24s ease forwards; }
+  .fu6 { animation: fadeUp 0.3s 0.30s ease forwards; }
+
+  @keyframes slideIn { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:translateX(0)} }
+  .slide-in { animation: slideIn 0.25s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="ld-logo">CWE V2.4</div>
+  <div class="ld-sub">Claims Workflow Engine</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+
+  <!-- Top Bar -->
+  <div id="topbar">
+    <div class="tb-left">
+      <button id="btn-back" onclick="showDashboard()">← Back</button>
+      <div>
+        <div class="app-eyebrow">Claims Workflow Engine</div>
+        <div class="app-title" id="topbar-title">Dashboard</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="user-name"  id="hdr-name">—</div>
+      <div id="hdr-badge"></div>
+    </div>
+  </div>
+  <div class="accent-line"></div>
+
+  <!-- ══════════════════════════════════════
+       VIEW: DASHBOARD
+  ══════════════════════════════════════ -->
+  <div id="view-dashboard" class="view active">
+    <div class="view-scroll">
+
+      <div id="dash-error"></div>
+
+      <!-- Log New Issue -->
+      <button id="btn-log-new" class="fu fu1" onclick="logNewIssue()">
+        <span style="background:rgba(0,0,0,0.15);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">＋</span>
+        Log New Issue
+      </button>
+
+      <!-- Metrics -->
+      <div class="section-label fu fu2">Overview</div>
+      <div class="metrics-grid fu fu2">
+        <div class="metric-card mc-blue">
+          <div class="mc-label">Total Open</div>
+          <div class="mc-value" id="m-total">—</div>
+          <div class="mc-sub"  id="m-total-sub">&nbsp;</div>
+        </div>
+        <div class="metric-card mc-red">
+          <div class="mc-label">Critical / High</div>
+          <div class="mc-value" id="m-crit">—</div>
+          <div class="mc-sub"  id="m-crit-sub">&nbsp;</div>
+        </div>
+        <div class="metric-card mc-warn">
+          <div class="mc-label">Escalated</div>
+          <div class="mc-value" id="m-esc">—</div>
+          <div class="mc-sub">awaiting review</div>
+        </div>
+        <div class="metric-card mc-grn">
+          <div class="mc-label">$ Variance</div>
+          <div class="mc-value" id="m-var">—</div>
+          <div class="mc-sub">open exposure</div>
+        </div>
+      </div>
+
+      <!-- By Stage -->
+      <div class="card fu fu3">
+        <div class="card-title">📊 By Stage</div>
+        <div id="stage-rows"></div>
+      </div>
+
+      <!-- By Priority -->
+      <div class="card fu fu4">
+        <div class="card-title">🎯 By Priority</div>
+        <div id="pri-rows"></div>
+      </div>
+
+      <hr class="divider fu fu5">
+
+      <!-- My Queue -->
+      <div class="fu fu5">
+        <div class="queue-header">
+          <div class="section-label" style="margin:0;border:none;padding:0;">My Open Claims</div>
+          <div class="queue-pill" id="queue-pill">0</div>
+        </div>
+        <div id="filter-pill-container"></div>
+        <div id="queue-list" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="ts fu fu6" id="ts"></div>
+
+    </div><!-- /view-scroll -->
+
+    <!-- Bottom bar -->
+    <div id="bottombar">
+      <button class="btn-sec" onclick="doRefresh()">↺ &nbsp;Refresh</button>
+      <button class="btn-sec" onclick="viewAllClaims()">All Claims &nbsp;↗</button>
+    </div>
+
+  </div><!-- /view-dashboard -->
+
+  <!-- ══════════════════════════════════════
+       VIEW: WORKFLOW
+  ══════════════════════════════════════ -->
+  <div id="view-workflow" class="view">
+    <div class="view-scroll" id="wf-content">
+      <div id="wf-loading">
+        <div class="wf-spinner"></div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);">Loading claim...</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<script>
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+var currentIssueRow  = null;
+var currentIssue     = null;
+var currentUser      = null;
+var activeFilter     = null; // { type: 'stage'|'priority', value: '...' }
+var dashboardData    = null; // full data cache for filtering
+
+var STAGE_COLORS = {
+  'NEW':'#58a6ff','WORKING':'#d29922','ESCALATED':'#f85149',
+  'APPEALED':'#3fb950','PENDING':'#8b949e','PENDING INFO':'#8b949e'
+};
+var PRI_COLORS = {
+  'Critical (Past Due)':  '#f85149',
+  'High (Urgent)':        '#d29922',
+  'High - Trend Alert':   '#d29922',
+  'Medium':               '#58a6ff',
+  'Low':                  '#3fb950'
+};
+var PRI_ORDER = ['Critical (Past Due)', 'High (Urgent)', 'High - Trend Alert', 'Medium', 'Low'];
+var TYPE_COLORS = { 'Denial':'#f85149','Rejection':'#d29922','Payment':'#3fb950','Internal':'#a78bfa' };
+var TYPE_ICONS  = { 'Denial':'🚫','Rejection':'❌','Payment':'💰','Internal':'⚙️' };
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  google.script.run
+    .withSuccessHandler(renderDashboard)
+    .withFailureHandler(onDashError)
+    .getDashboardData();
+});
+
+// ══════════════════════════════════════════════════════
+// VIEW SWITCHING
+// ══════════════════════════════════════════════════════
+function showDashboard() {
+  document.getElementById('view-workflow').classList.remove('active');
+  document.getElementById('view-dashboard').classList.add('active');
+  document.getElementById('btn-back').style.display = 'none';
+  document.getElementById('topbar-title').textContent = 'Dashboard';
+  currentIssueRow = null;
+  currentIssue    = null;
+  // Restore filter state if active, otherwise show normal queue
+  if (activeFilter) {
+    renderFilteredQueue();
+  }
+}
+
+function showWorkflow(row) {
+  currentIssueRow = row;
+  document.getElementById('view-dashboard').classList.remove('active');
+  document.getElementById('view-workflow').classList.add('active');
+  document.getElementById('btn-back').style.display = 'flex';
+  document.getElementById('topbar-title').textContent = 'Workflow';
+
+  // Show spinner
+  document.getElementById('wf-content').innerHTML =
+    '<div id="wf-loading"><div class="wf-spinner"></div>' +
+    '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);">Loading claim...</div></div>';
+
+  // Fetch claim data + builder output from server
+    google.script.run
+    .withSuccessHandler(function(d) {
+      if (!d) { onWfError({ message: 'No data returned from server. Check Apps Script logs.' }); return; }
+      if (d.error) { onWfError({ message: d.error }); return; }
+      renderWorkflow(d);
+    })
+    .withFailureHandler(onWfError)
+    .getWorkflowData(row);
+}
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD RENDER
+// ══════════════════════════════════════════════════════
+function renderDashboard(d) {
+  hideLoading();
+
+  currentUser = { name: d.userName, level: d.userLevel, group: d.userGroup };
+
+  // Header
+  set('hdr-name', d.userName || '—');
+  var isAdmin = (d.userLevel === 'Admin');
+  document.getElementById('hdr-badge').innerHTML =
+    '<span class="user-badge ' + (isAdmin ? 'badge-admin' : 'badge-analyst') + '">' +
+    esc(d.userLevel || 'Analyst') +
+    (d.userGroup ? ' · ' + esc(d.userGroup) : '') + '</span>';
+
+  // Metrics
+  var total = d.totalOpen || 0, crit = d.criticalHigh || 0, escN = d.escalatedCount || 0;
+  set('m-total', total);
+  set('m-total-sub', total === 1 ? '1 open claim' : total + ' open claims');
+  set('m-crit', crit);
+  set('m-crit-sub', crit === 0 ? 'none flagged' : crit + ' flagged');
+  set('m-esc', escN);
+  set('m-var', fmtDollars(d.totalVariance));
+
+  // Breakdowns
+  dashboardData = d;
+  renderBreakdown('stage-rows', d.byStageCounts || {}, STAGE_COLORS, null, 'stage');
+  renderBreakdown('pri-rows', d.byPriorityCounts || {}, PRI_COLORS, null, 'priority');
+
+  // Queue
+  renderQueue(d.myQueue || []);
+
+  // Timestamp
+  document.getElementById('ts').innerHTML =
+    '<span class="live-dot"></span>Updated ' +
+    new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+  document.getElementById('app').style.display = 'flex';
+}
+
+function doRefresh() {
+  activeFilter = null;
+  var scroll = document.querySelector('#view-dashboard .view-scroll');
+  scroll.style.opacity = '0.4';
+  google.script.run
+    .withSuccessHandler(function(d) { scroll.style.opacity = '1'; renderDashboard(d); })
+    .withFailureHandler(function(e) { scroll.style.opacity = '1'; onDashError(e); })
+    .getDashboardData();
+}
+
+function renderBreakdown(elId, counts, colorMap, order, filterType) {
+  var el   = document.getElementById(elId);
+  var keys = order
+    ? order.filter(function(k){ return (counts[k]||0) > 0; })
+    : Object.keys(counts).sort(function(a,b){ return (counts[b]||0)-(counts[a]||0); });
+  if (keys.length === 0) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No data.</div>'; return; }
+  var total = keys.reduce(function(s,k){ return s+(counts[k]||0); }, 0) || 1;
+  el.innerHTML = keys.map(function(k) {
+    var cnt = counts[k]||0, pct = Math.round(cnt/total*100);
+    var color = colorMap[k] || colorMap[k.toUpperCase()] || '#8b949e';
+    var isActive = activeFilter && activeFilter.type === filterType && activeFilter.value === k;
+    return '<div class="breakdown-row' + (filterType ? ' breakdown-clickable' : '') + (isActive ? ' breakdown-active' : '') + '" ' +
+      (filterType ? 'data-filter-type="'+filterType+'" data-filter-value="'+esc(k)+'"' : '') + '>' +
+      '<div class="br-label">'+esc(k)+'</div>' +
+      '<div class="br-track"><div class="br-fill" style="width:0%;background:'+color+';" data-w="'+pct+'"></div></div>' +
+      '<div class="br-count">'+cnt+'</div>' +
+      (filterType ? '<div class="br-arrow">›</div>' : '') +
+      '</div>';
+  }).join('');
+  // Attach click handlers
+  if (filterType) {
+    el.querySelectorAll('.breakdown-clickable').forEach(function(row) {
+      row.addEventListener('click', function() {
+        var type  = this.getAttribute('data-filter-type');
+        var value = this.getAttribute('data-filter-value');
+        applyFilter(type, value);
+      });
+    });
+  }
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    el.querySelectorAll('.br-fill').forEach(function(b){ b.style.width = b.getAttribute('data-w')+'%'; });
+  }); });
+}
+
+function applyFilter(type, value) {
+  // Toggle off if same filter clicked again
+  if (activeFilter && activeFilter.type === type && activeFilter.value === value) {
+    clearFilter();
+    return;
+  }
+  activeFilter = { type: type, value: value };
+  renderFilteredQueue();
+  // Re-render breakdowns to show active state
+  if (dashboardData) {
+    renderBreakdown('stage-rows', dashboardData.byStageCounts || {}, STAGE_COLORS, null, 'stage');
+    renderBreakdown('pri-rows', dashboardData.byPriorityCounts || {}, PRI_COLORS, null, 'priority');
+  }
+}
+
+function clearFilter() {
+  activeFilter = null;
+  if (dashboardData) {
+    renderQueue(dashboardData.myQueue || []);
+    renderBreakdown('stage-rows', dashboardData.byStageCounts || {}, STAGE_COLORS, null, 'stage');
+    renderBreakdown('pri-rows', dashboardData.byPriorityCounts || {}, PRI_COLORS, null, 'priority');
+  }
+}
+
+function renderFilteredQueue() {
+  if (!dashboardData || !activeFilter) return;
+
+  // Filter from full queue data
+  var filtered = (dashboardData.myQueue || []).filter(function(c) {
+    if (activeFilter.type === 'stage')    return c.stage    === activeFilter.value;
+    if (activeFilter.type === 'priority') return c.priority === activeFilter.value;
+    return true;
+  });
+
+  var pill = document.getElementById('queue-pill');
+  pill.textContent = filtered.length;
+  filtered.length > 0 ? pill.classList.add('live') : pill.classList.remove('live');
+
+  // Update queue label
+  var queueHeader = document.querySelector('.queue-header .section-label');
+  if (queueHeader) queueHeader.textContent = 'Filtered Claims';
+
+  // Show filter pill
+  var filterPillEl = document.getElementById('filter-pill-container');
+  if (filterPillEl) {
+    filterPillEl.innerHTML = '<div class="filter-pill">' +
+      esc(activeFilter.value) +
+      ' <span class="filter-pill-x" onclick="clearFilter()">×</span>' +
+      '</div>';
+  }
+
+  var el = document.getElementById('queue-list');
+  if (filtered.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">🔍</div>' +
+      '<div class="es-title">No matching claims</div>' +
+      '<div class="es-desc">No claims match this filter.</div></div>';
+    return;
+  }
+  el.innerHTML = filtered.map(function(c) {
+    var priCls   = tagClassForPriority(c.priority);
+    var stageCls = tagClassForStage(c.stage);
+    var aging    = c.agingDays != null ? c.agingDays + 'd old' : '';
+    var amt      = c.amount ? fmtDollars(c.amount) : '';
+    return '<div class="claim-item" data-row="'+c.row+'">' +
+      '<div class="ci-top"><div class="ci-id">'+esc(c.claimId||'ROW-'+c.row)+'</div>' +
+      (c.priority ? '<span class="tag '+priCls+'">'+esc(c.priority)+'</span>' : '') + '</div>' +
+      '<div class="ci-mid">'+esc(c.practice||c.payer||'—')+'</div>' +
+      '<div class="ci-bot">' +
+        '<span class="tag '+stageCls+'">'+esc(c.stage||'—')+'</span>' +
+        (c.payer && c.practice ? '<span class="ci-meta">· '+esc(c.payer)+'</span>' : '') +
+        (aging ? '<span class="ci-meta">· '+aging+'</span>' : '') +
+        (amt   ? '<span class="ci-meta">· '+amt+'</span>'   : '') +
+      '</div>' +
+      '<div class="ci-arrow">›</div></div>';
+  }).join('');
+  el.querySelectorAll('.claim-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      showWorkflow(parseInt(this.getAttribute('data-row')));
+    });
+  });
+}
+
+function renderQueue(queue) {
+  var pill = document.getElementById('queue-pill');
+  pill.textContent = queue.length;
+  queue.length > 0 ? pill.classList.add('live') : pill.classList.remove('live');
+
+  // Reset label and filter pill
+  var queueHeader = document.querySelector('.queue-header .section-label');
+  if (queueHeader) queueHeader.textContent = 'My Open Claims';
+  var filterPillEl = document.getElementById('filter-pill-container');
+  if (filterPillEl) filterPillEl.innerHTML = '';
+
+  var el = document.getElementById('queue-list');
+  if (queue.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">✅</div>' +
+      '<div class="es-title">Queue is clear</div>' +
+      '<div class="es-desc">No open claims assigned to you.</div></div>';
+    return;
+  }
+  el.innerHTML = queue.map(function(c) {
+    var priCls   = tagClassForPriority(c.priority);
+    var stageCls = tagClassForStage(c.stage);
+    var aging    = c.agingDays != null ? c.agingDays + 'd old' : '';
+    var amt      = c.amount ? fmtDollars(c.amount) : '';
+    return '<div class="claim-item" data-row="'+c.row+'">' +
+      '<div class="ci-top"><div class="ci-id">'+esc(c.claimId||'ROW-'+c.row)+'</div>' +
+      (c.priority ? '<span class="tag '+priCls+'">'+esc(c.priority)+'</span>' : '') + '</div>' +
+      '<div class="ci-mid">'+esc(c.practice||c.payer||'—')+'</div>' +
+      '<div class="ci-bot">' +
+        '<span class="tag '+stageCls+'">'+esc(c.stage||'—')+'</span>' +
+        (c.payer && c.practice ? '<span class="ci-meta">· '+esc(c.payer)+'</span>' : '') +
+        (aging ? '<span class="ci-meta">· '+aging+'</span>' : '') +
+        (amt   ? '<span class="ci-meta">· '+amt+'</span>'   : '') +
+      '</div>' +
+      '<div class="ci-arrow">›</div></div>';
+  }).join('');
+  el.querySelectorAll('.claim-item').forEach(function(item) {
+  item.addEventListener('click', function() {
+    showWorkflow(parseInt(this.getAttribute('data-row')));
+  });
+});
+}
+
+// ══════════════════════════════════════════════════════
+// WORKFLOW RENDER
+// ══════════════════════════════════════════════════════
+function renderWorkflow(d) {
+  currentIssue = d.issue;
+  document.getElementById('topbar-title').textContent = esc(d.issue.issueId || 'Claim');
+
+  var typeColor = TYPE_COLORS[d.issue.issueType] || '#8b949e';
+  var typeIcon  = TYPE_ICONS[d.issue.issueType]  || '📋';
+  var priCls    = tagClassForPriority(d.issue.priority);
+  var stageCls  = tagClassForStage(d.issue.workflowStage);
+
+  var html = '<div class="slide-in">';
+
+  // ── Claim nav ──
+  html += '<div class="claim-nav">' +
+    '<select id="claimNavSel" onchange="navToClaim()">' + (d.claimOptions||'') + '</select>' +
+    '<button class="claim-nav-btn" onclick="navToClaim()">Go →</button>' +
+    '</div>';
+
+  // ── Claim header ──
+  html += '<div class="claim-header" style="border-left-color:'+typeColor+';">' +
+    '<div class="claim-header-top">' +
+      '<div class="claim-issue-id">'+typeIcon+' <span>'+esc(d.issue.issueId||'—')+'</span></div>' +
+      '<span class="tag '+priCls+'">'+esc(d.issue.priority||'')+'</span>' +
+    '</div>' +
+    '<div class="claim-meta-grid">' +
+      metaRow('Type',     '<span class="tag" style="background:'+typeColor+'22;color:'+typeColor+'">'+esc(d.issue.issueType||'—')+'</span>') +
+      metaRow('Stage',    '<span class="tag '+stageCls+'">'+esc(d.issue.workflowStage||'—')+'</span>') +
+      metaRow('Practice', esc(d.issue.practice||'—')) +
+      (d.issue.provider    ? metaRow('Provider',   esc(d.issue.provider))    : '') +
+      (d.issue.payerName   ? metaRow('Payer',       esc(d.issue.payerName))  : '') +
+      (d.issue.accountNumber ? metaRow('Account',  esc(d.issue.accountNumber)) : '') +
+      (d.issue.dos         ? metaRow('DOS',         esc(d.issue.dos))        : '') +
+      (d.issue.cpt         ? metaRow('CPT',         esc(d.issue.cpt))        : '') +
+      (d.issue.assignedTo  ? metaRow('Assigned',    esc(d.issue.assignedTo)) : '') +
+      (d.issue.daysOpen    ? metaRow('Days Open',   esc(d.issue.daysOpen))   : '') +
+      (d.issue.variance    ? metaRow('Variance',    '$'+Math.abs(d.issue.variance).toFixed(2)) : '') +
+    '</div>';
+
+  if (d.issue.carcCode) {
+    html += '<div style="margin-top:8px;"><span style="color:var(--muted);font-size:11px;font-weight:600;">CARC: </span>' +
+      '<span style="font-family:var(--mono);font-size:11px;color:var(--accent);">' +
+      esc((d.issue.carcGroupCode ? d.issue.carcGroupCode+'-' : '') + d.issue.carcCode) + '</span>';
+    if (d.issue.carcDescription) html += ' <span style="font-size:11px;color:var(--muted);">— '+esc(d.issue.carcDescription)+'</span>';
+    html += '</div>';
+  }
+
+  if (d.issue.carcAction) {
+    html += '<div class="carc-action"><div class="carc-action-icon">⚡</div>' +
+      '<div class="carc-action-text"><strong>Action:</strong> '+esc(d.issue.carcAction)+'</div></div>';
+  }
+
+  html += '</div>'; // /claim-header
+
+  // ── Payer intel ──
+  if (d.payerInfo) {
+    html += d.payerInfo;
+  }
+
+  // ── MAC info ──
+  if (d.macInfo) {
+    html += d.macInfo;
+  }
+
+  // ── Workflow decision tree ──
+  html += d.workflowHTML || '';
+
+  // ── Edit Claim ──
+  html += '<div class="card">' +
+    '<div class="card-title">✏️ Edit Claim</div>' +
+    '<button class="wf-btn wf-btn-secondary" onclick="editClaim()">✏️ Edit Claim Details</button>' +
+    '</div>';
+
+  // ── Activity Log ──
+  html += '<div class="card">' +
+    '<div class="card-title">📝 Log Activity</div>' +
+    '<textarea id="activityNote" placeholder="Log what you did, findings, next steps..."></textarea>' +
+    '<button class="wf-btn wf-btn-primary" onclick="logActivity()" style="margin-top:8px;">💾 Save Activity</button>' +
+    '</div>';
+
+  // ── Quick Actions ──
+  html += '<div class="card">' +
+    '<div class="card-title">⚡ Quick Actions</div>' +
+
+    '<label class="qa-label" style="margin-top:0;">Reassign To:</label>' +
+    '<select id="reassignSelect" class="qa-select" onchange="toggleOther(\'reassignSelect\',\'reassignOther\')">' +
+    '<option value="">Select person...</option>' + (d.userOptions||'') +
+    '<option value="__other__">Other (type name)</option></select>' +
+    '<input type="text" id="reassignOther" class="wf-input" placeholder="Enter name..." style="display:none;">' +
+    '<button class="wf-btn wf-btn-secondary" onclick="doReassign()">👤 Reassign</button>' +
+
+    '<label class="qa-label">Change Priority:</label>' +
+    '<select id="prioritySelect" class="qa-select" onchange="toggleOther(\'prioritySelect\',\'priorityOther\')">' +
+    '<option value="">Select priority...</option>' +
+    '<option>Critical (Past Due)</option><option>High (Urgent)</option><option>Medium</option><option>Low</option>' +
+    '<option>High - Trend Alert</option><option value="__other__">Other (type custom)</option></select>' +
+    '<input type="text" id="priorityOther" class="wf-input" placeholder="Enter priority..." style="display:none;">' +
+    '<button class="wf-btn wf-btn-secondary" onclick="doChangePriority()">⚠️ Change Priority</button>' +
+
+    '<label class="qa-label">Change Root Cause:</label>' +
+    '<select id="rootCauseSelect" class="qa-select" onchange="toggleOther(\'rootCauseSelect\',\'rootCauseOther\')">' +
+    '<option value="">Select root cause...</option>' +
+    '<option>Administrative/Front End</option><option>Coding/Billing</option>' +
+    '<option>Clinical/Documentation</option><option>Payer Issue/System Error</option>' +
+    '<option>Patient Responsibility</option><option>Credentialing/Contracting</option>' +
+    '<option>Research &amp; Investigation</option><option value="__other__">Other (type custom)</option></select>' +
+    '<input type="text" id="rootCauseOther" class="wf-input" placeholder="Enter root cause..." style="display:none;">' +
+    '<button class="wf-btn wf-btn-secondary" onclick="doChangeRootCause()">🔄 Change Root Cause</button>' +
+    '</div>';
+
+  html += '</div>'; // /slide-in
+
+  document.getElementById('wf-content').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════
+// WORKFLOW ACTIONS
+// ══════════════════════════════════════════════════════
+function logNewIssue() { google.script.run.showNewIssueForm(); }
+function viewAllClaims() { 
+  activeFilter = null;
+  if (dashboardData) renderQueue(dashboardData.myQueue || []);
+}
+
+function editClaim() {
+  google.script.run.withSuccessHandler(function(){}).showEditIssueForm(currentIssueRow);
+}
+
+function navToClaim() {
+  var row = parseInt(document.getElementById('claimNavSel').value);
+  if (row) showWorkflow(row);
+}
+
+function logActivity() {
+  var note = document.getElementById('activityNote').value.trim();
+  if (!note) { showWfMsg('Please enter a note.', 'warn'); return; }
+  google.script.run
+    .withSuccessHandler(function() {
+      document.getElementById('activityNote').value = '';
+      showWfMsg('✅ Activity logged!', 'success');
+    })
+    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
+    .logActivityFromSidebar(currentIssue.issueId, note);
+}
+
+function moveToStage(stage) {
+  google.script.run
+    .withSuccessHandler(function(){ showWorkflow(currentIssueRow); })
+    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
+    .updateIssueField(currentIssueRow, 'workflowStage', stage);
+}
+
+function markResolved() {
+  if (!confirm('Mark this issue as resolved?')) return;
+  google.script.run
+    .withSuccessHandler(function(){
+      showDashboard();
+      doRefresh();
+    })
+    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
+    .resolveIssue(currentIssueRow);
+}
+
+function doReassign() {
+  var v = document.getElementById('reassignSelect').value;
+  if (v === '__other__') v = document.getElementById('reassignOther').value.trim();
+  if (!v) { showWfMsg('Please select or enter a person.', 'warn'); return; }
+  google.script.run
+    .withSuccessHandler(function(){ showWfMsg('✅ Reassigned to '+v, 'success'); showWorkflow(currentIssueRow); })
+    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
+    .updateIssueField(currentIssueRow, 'assignedTo', v);
+}
+
+function doChangePriority() {
+  var v = document.getElementById('prioritySelect').value;
+  if (v === '__other__') v = document.getElementById('priorityOther').value.trim();
+  if (!v) { showWfMsg('Please select or enter a priority.', 'warn'); return; }
+  google.script.run
+    .withSuccessHandler(function(){ showWfMsg('✅ Priority changed to '+v, 'success'); showWorkflow(currentIssueRow); })
+    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
+    .updateIssueField(currentIssueRow, 'priority', v);
+}
+
+function doChangeRootCause() {
+  var v = document.getElementById('rootCauseSelect').value;
+  if (v === '__other__') v = document.getElementById('rootCauseOther').value.trim();
+  if (!v) { showWfMsg('Please select or enter a root cause.', 'warn'); return; }
+  google.script.run
+    .withSuccessHandler(function(){ showWorkflow(currentIssueRow); })
+    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
+    .updateIssueField(currentIssueRow, 'rootCause', v);
+}
+
+function doChangeRootCauseAndReload(rootCause) {
+  google.script.run
+    .withSuccessHandler(function(){ showWorkflow(currentIssueRow); })
+    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
+    .updateIssueField(currentIssueRow, 'rootCause', rootCause);
+}
+
+function showResearchSource(type) {
+  ['portal','ai','internet','phone'].forEach(function(t){
+    document.getElementById(t+'Form').style.display = 'none';
+  });
+  document.getElementById(type+'Form').style.display = 'block';
+  document.getElementById('researchSourceForm').style.display = 'block';
+}
+
+function saveResearch(type) {
+  var note = '';
+  if (type === 'portal') {
+    var url = document.getElementById('portalUrl').value.trim();
+    var date = document.getElementById('portalDate').value;
+    var findings = document.getElementById('portalFindings').value.trim();
+    if (!url || !findings) { showWfMsg('Please enter URL and findings.','warn'); return; }
+    note = '🌐 PORTAL RESEARCH | URL: '+url+' | Date: '+date+' | Findings: '+findings;
+  } else if (type === 'ai') {
+    var tool = document.getElementById('aiTool').value;
+    var question = document.getElementById('aiQuestion').value.trim();
+    var findings = document.getElementById('aiFindings').value.trim();
+    if (!tool || !question || !findings) { showWfMsg('Please complete all fields.','warn'); return; }
+    note = '🤖 AI RESEARCH | Tool: '+tool+' | Question: '+question+' | Findings: '+findings;
+  } else if (type === 'internet') {
+    var params = document.getElementById('searchParams').value.trim();
+    var sources = document.getElementById('internetSources').value.trim();
+    var findings = document.getElementById('internetFindings').value.trim();
+    if (!params || !findings) { showWfMsg('Please enter search parameters and findings.','warn'); return; }
+    note = '🔎 INTERNET RESEARCH | Search: '+params+' | Sources: '+sources+' | Findings: '+findings;
+  } else if (type === 'phone') {
+    var phone = document.getElementById('phoneNumber').value.trim();
+    var rep = document.getElementById('phoneRep').value.trim();
+    var ref = document.getElementById('phoneRef').value.trim();
+    var findings = document.getElementById('phoneFindings').value.trim();
+    if (!phone || !findings) { showWfMsg('Please enter phone number and findings.','warn'); return; }
+    note = '📞 PHONE RESEARCH | Number: '+phone+' | Rep: '+rep+' | Ref#: '+ref+' | Findings: '+findings;
+  }
+  google.script.run
+    .withSuccessHandler(function(){ showWfMsg('✅ Research saved!','success'); showWorkflow(currentIssueRow); })
+    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
+    .logResearchAndAdvance(currentIssue.issueId, currentIssueRow, note);
+}
+
+// ══════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════
+function toggleOther(selectId, otherId) {
+  var sel = document.getElementById(selectId);
+  var inp = document.getElementById(otherId);
+  if (inp) inp.style.display = sel.value === '__other__' ? 'block' : 'none';
+}
+
+function showWfMsg(msg, type) {
+  var existing = document.getElementById('wf-flash');
+  if (existing) existing.remove();
+  var el = document.createElement('div');
+  el.id = 'wf-flash';
+  el.className = 'callout ' + (type||'info');
+  el.innerHTML = '<div>' + esc(msg) + '</div>';
+  el.style.marginBottom = '8px';
+  var content = document.getElementById('wf-content');
+  content.insertBefore(el, content.firstChild);
+  setTimeout(function(){ if(el.parentNode) el.remove(); }, 3500);
+}
+
+function metaRow(key, valHtml) {
+  return '<div class="cm-key">'+key+':</div><div class="cm-val">'+valHtml+'</div>';
+}
+
+function tagClassForPriority(p) {
+  var map = {'CRITICAL':'tag-red','HIGH':'tag-yellow','MEDIUM':'tag-blue','LOW':'tag-green'};
+  return map[(p||'').toUpperCase()] || 'tag-muted';
+}
+function tagClassForStage(s) {
+  var map = {'NEW':'tag-blue','WORKING':'tag-yellow','ESCALATED':'tag-red','APPEALED':'tag-green','PENDING':'tag-muted','PENDING INFO':'tag-muted'};
+  return map[(s||'').toUpperCase()] || 'tag-muted';
+}
+
+function hideLoading() {
+  var el = document.getElementById('loading');
+  if (!el) return;
+  el.style.opacity = '0'; el.style.transition = 'opacity 0.3s';
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 320);
+}
+
+function onDashError(err) {
+  hideLoading();
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('dash-error').innerHTML =
+    '<div class="callout danger"><span class="callout-icon">⚠️</span><div>'+esc(err.message||String(err))+'</div></div>';
+}
+
+function onWfError(err) {
+    document.getElementById('wf-content').innerHTML =
+    '<div class="callout danger" style="margin:14px;"><span class="callout-icon">⚠️</span><div>'+esc(err.message||String(err))+'</div></div>';
+}
+
+function set(id, val) { var el = document.getElementById(id); if(el) el.textContent = val; }
+
+function fmtDollars(v) {
+  var n = parseFloat(v);
+  if ((!v && v !== 0)||isNaN(n)) return '—';
+  if (n >= 1000000) return '$'+(n/1000000).toFixed(1)+'M';
+  if (n >= 1000)    return '$'+(n/1000).toFixed(1)+'K';
+  return '$'+n.toFixed(0);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

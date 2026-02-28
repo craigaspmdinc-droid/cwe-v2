@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container { max-width: 600px; margin: 0 auto; }
+    .form-section {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #667eea;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+    .issue-type-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .issue-type-btn {
+      padding: 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+    .issue-type-btn:hover {
+      border-color: #667eea;
+      background: #f8f9ff;
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+    }
+    .issue-type-btn.selected {
+      border-color: #667eea;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 8px 20px rgba(102,126,234,0.4);
+    }
+    .issue-icon { font-size: 36px; margin-bottom: 8px; }
+    .issue-label { font-weight: 600; font-size: 14px; }
+    .form-group { margin-bottom: 16px; display: none; }
+    .form-group.visible { display: block; }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #333;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border 0.3s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+    }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 20px;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+      transition: all 0.3s;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102,126,234,0.5); }
+    .btn:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+    .required { color: #e74c3c; }
+    .info {
+      background: #f0f4ff;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      border-left: 4px solid #667eea;
+    }
+    .help-text { font-size: 11px; color: #666; margin-top: 4px; font-style: italic; }
+    .tooltip-wrapper { position: relative; display: inline-block; width: 100%; }
+    .tooltip-wrapper .tooltip {
+      visibility: hidden;
+      opacity: 0;
+      background: #1e293b;
+      color: #f1f5f9;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      width: 220px;
+      position: absolute;
+      z-index: 999;
+      top: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      transition: opacity 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      pointer-events: none;
+    }
+    .tooltip-wrapper .tooltip::after {
+      content: '';
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #1e293b;
+    }
+    .tooltip-wrapper:hover .tooltip { visibility: visible; opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="issue-type-grid">
+    <div class="tooltip-wrapper">
+      <div class="issue-type-btn" onclick="selectIssueType('Denial')">
+        <div class="issue-icon">🚫</div>
+        <div class="issue-label">Denial</div>
+      </div>
+      <div class="tooltip">Payer received and processed the claim but refused payment. Includes CO, PR, and OA denial codes. Appeal deadlines apply.</div>
+    </div>
+    <div class="tooltip-wrapper">
+      <div class="issue-type-btn" onclick="selectIssueType('Rejection')">
+        <div class="issue-icon">❌</div>
+        <div class="issue-label">Rejection</div>
+      </div>
+      <div class="tooltip">Claim was never processed — returned due to a technical or formatting error. Must be corrected and resubmitted.</div>
+    </div>
+    <div class="tooltip-wrapper">
+      <div class="issue-type-btn" onclick="selectIssueType('Payment')">
+        <div class="issue-icon">💰</div>
+        <div class="issue-label">Payment Issue</div>
+      </div>
+      <div class="tooltip">Claim was paid but the amount is incorrect. Use for underpayments, overpayments, or contractual disputes.</div>
+    </div>
+    <div class="tooltip-wrapper">
+      <div class="issue-type-btn" onclick="selectIssueType('Internal')">
+        <div class="issue-icon">⚙️</div>
+        <div class="issue-label">Internal Issue</div>
+      </div>
+      <div class="tooltip">Internal workflow or system problem — batch errors, duplicate policies, wrong clearinghouse, missing NPI in batch.</div>
+    </div>
+  </div>
+
+  <div id="formFields" style="display:none;">
+    <div class="form-section">
+      <div class="section-title">Step 2: Issue Details</div>
+
+      <div class="form-group visible">
+        <label>Practice <span class="required">*</span></label>
+        <select id="practice" onchange="loadProviders()">
+          <option value="">Select practice...</option>
+          <?!= practiceOptions ?>
+        </select>
+      </div>
+
+      <div class="form-group visible" id="providerGroup" style="display:none;">
+        <label>Provider</label>
+        <select id="provider">
+          <option value="">Select provider...</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="accountNumberField">
+        <label>Account Number</label>
+        <input type="text" id="accountNumberInput" placeholder="e.g., Copy and Paste ID">
+      </div>
+
+      <div class="form-group" id="payerFields">
+        <label>Payer <span class="required">*</span></label>
+        <select id="payer" onchange="loadCoverageTypes()">
+          <option value="">Select payer...</option>
+        </select>
+        <label style="margin-top:12px;">Coverage Type</label>
+        <select id="coverageType" onchange="loadPlanTypes()">
+          <option value="">Select coverage type...</option>
+        </select>
+        <label style="margin-top:12px;">Plan Type</label>
+        <select id="planType">
+          <option value="">Select plan type...</option>
+        </select>
+        <label style="margin-top:12px;">CPT Code</label>
+        <input type="text" id="cpt" oninput="checkGlobalPeriod()">
+        <div id="globalPeriodWarning" style="display:none; background:#fef3c7; border-left:3px solid #f59e0b; padding:10px; border-radius:6px; margin-top:6px; font-size:12px;"></div>
+        <label style="margin-top:12px;">Date of Service</label>
+        <input type="date" id="dos">
+      </div>
+
+      <div class="form-group" id="denialFields">
+        <label>Denial Category</label>
+        <select id="denialCategory">
+          <option value="">Select category...</option>
+        </select>
+        <div class="help-text">System will suggest root cause and action</div>
+        <label style="margin-top:12px;">CARC Code</label>
+        <input type="text" id="carcCode" placeholder="Type code or description..." oninput="searchCodes('CARC')">
+        <div id="carcResults" style="display:none; border:2px solid #e0e0e0; border-radius:8px; max-height:150px; overflow-y:auto; margin-top:4px;"></div>
+        <div id="carcSelected" style="display:none; background:#f0f4ff; padding:8px; border-radius:8px; margin-top:4px; font-size:12px; border-left:3px solid #667eea;"></div>
+        <div class="help-text">Optional: Enter CARC code or search by description</div>
+        <label style="margin-top:12px;">RARC Code</label>
+        <input type="text" id="rarcCode" placeholder="Type code or description..." oninput="searchCodes('RARC')">
+        <div id="rarcResults" style="display:none; border:2px solid #e0e0e0; border-radius:8px; max-height:150px; overflow-y:auto; margin-top:4px;"></div>
+        <div id="rarcSelected" style="display:none; background:#f0f4ff; padding:8px; border-radius:8px; margin-top:4px; font-size:12px; border-left:3px solid #667eea;"></div>
+        <div class="help-text">Optional: Enter RARC code or search by description</div>
+        <label style="margin-top:12px;">Additional Codes</label>
+        <input type="text" id="additionalCodes" placeholder="e.g., CO-97, N30 (secondary codes for reference)">
+        <div class="help-text">Optional: List any additional CARC/RARC codes from the EOB</div>
+      </div>
+
+      <div class="form-group" id="denialRejectionDateField">
+        <label>Denial / Rejection Date</label>
+        <input type="date" id="denialRejectionDate">
+        <div class="help-text">Used to calculate appeal deadline</div>
+      </div>
+
+      <div class="form-group" id="rejectionFields">
+        <label>Rejection Category</label>
+        <select id="rejectionCategory">
+          <option value="">Select category...</option>
+        </select>
+        <div class="help-text">System will suggest root cause and action</div>
+        <label style="margin-top:12px;">Additional Details</label>
+        <input type="text" id="rejectionReason" placeholder="e.g., Missing NPI, Invalid format">
+      </div>
+
+      <div class="form-group" id="paymentFields">
+        <label>Expected Amount <span class="required">*</span></label>
+        <input type="number" id="expectedAmount" step="0.01">
+        <label style="margin-top:12px;">Paid Amount <span class="required">*</span></label>
+        <input type="number" id="paidAmount" step="0.01">
+        <label style="margin-top:12px;">Payment Issue Type</label>
+        <select id="paymentType">
+          <option value="">Select...</option>
+          <option>Underpayment</option>
+          <option>Overpayment</option>
+          <option>Contractual Dispute</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="internalFields">
+        <label>Batch ID</label>
+        <input type="text" id="batchId">
+        <label style="margin-top:12px;">Error Type</label>
+        <select id="errorType">
+          <option value="">Select...</option>
+          <option>Duplicate Policy</option>
+          <option>Wrong Clearinghouse</option>
+          <option>Missing NPI in Batch</option>
+          <option>Invalid Patient ID</option>
+          <option>Programming Error</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="form-group visible">
+        <label>Priority</label>
+        <div class="info" style="margin:0;">⚡ Auto-calculated based on timely filing deadline</div>
+      </div>
+
+      <div class="form-group visible">
+        <label>Assign To</label>
+        <select id="assignedTo">
+          <option value="">Unassigned</option>
+          <?!= userOptions ?>
+        </select>
+      </div>
+
+      <div class="form-group visible">
+        <label>Initial Notes</label>
+        <textarea id="notes" rows="3" placeholder="Describe the issue..."></textarea>
+      </div>
+
+      <button class="btn" onclick="editRow ? updateIssue() : submitIssue()"><?= editRow ? '💾 Save Changes' : '📋 Log Issue' ?></button>
+    </div>
+  </div>
+
+  <script>
+    var selectedType = <?= existing.issueType ? JSON.stringify(existing.issueType) : 'null' ?>;
+    var selectedPractice = null;
+    var selectedPayer = null;
+    var selectedCoverage = null;
+    var carcSelection = null;
+    var rarcSelection = null;
+
+    // Edit mode
+    var editRow = <?!= editRow ? editRow : 'null' ?>;
+    var existing = <?= JSON.stringify(existing) ?>;
+
+    if (editRow && existing.issueType) {
+      document.addEventListener('DOMContentLoaded', function() { prefillForm(); });
+      if (document.readyState === 'complete') { setTimeout(prefillForm, 500); }
+    }
+
+    function prefillForm() {
+      document.querySelectorAll('.issue-type-btn').forEach(function(btn) {
+        if (btn.innerText.trim().indexOf(existing.issueType) !== -1) { btn.click(); }
+      });
+      setTimeout(function() {
+        var practiceSelect = document.getElementById('practice');
+        for (var i = 0; i < practiceSelect.options.length; i++) {
+          if (practiceSelect.options[i].text === existing.practice) {
+            practiceSelect.selectedIndex = i;
+            loadProviders();
+            break;
+          }
+        }
+        if (existing.cpt)               document.getElementById('cpt').value = existing.cpt;
+        if (existing.dos)               document.getElementById('dos').value = existing.dos;
+        if (existing.accountNumber)     document.getElementById('accountNumberInput').value = existing.accountNumber;
+        if (existing.denialRejectionDate) document.getElementById('denialRejectionDate').value = existing.denialRejectionDate;
+        if (existing.expectedAmount)    document.getElementById('expectedAmount').value = existing.expectedAmount;
+        if (existing.paidAmount)        document.getElementById('paidAmount').value = existing.paidAmount;
+        if (existing.assignedTo)        document.getElementById('assignedTo').value = existing.assignedTo;
+        if (existing.carcCode) {
+          carcSelection = { code: existing.carcCode, description: existing.carcDescription || '', groupCode: existing.carcGroupCode || '' };
+          document.getElementById('carcCode').value = existing.carcCode;
+          document.getElementById('carcSelected').innerHTML = '✓ [' + (existing.carcGroupCode || '') + '] ' + existing.carcCode + ' - ' + (existing.carcDescription || '');
+          document.getElementById('carcSelected').style.display = 'block';
+        }
+        if (existing.rarcCode) {
+          rarcSelection = { code: existing.rarcCode, description: existing.rarcDescription || '' };
+          document.getElementById('rarcCode').value = existing.rarcCode;
+          document.getElementById('rarcSelected').innerHTML = '✓ ' + existing.rarcCode + ' - ' + (existing.rarcDescription || '');
+          document.getElementById('rarcSelected').style.display = 'block';
+        }
+      }, 1000);
+    }
+
+    function selectIssueType(type) {
+      selectedType = type;
+      document.querySelectorAll('.issue-type-btn').forEach(function(btn) { btn.classList.remove('selected'); });
+      event.currentTarget.classList.add('selected');
+      document.getElementById('formFields').style.display = 'block';
+
+      ['denialRejectionDateField','accountNumberField','payerFields','denialFields',
+       'rejectionFields','paymentFields','internalFields'].forEach(function(id) {
+        document.getElementById(id).classList.remove('visible');
+      });
+
+      if (type === 'Denial') {
+        ['accountNumberField','payerFields','denialFields','denialRejectionDateField'].forEach(function(id) {
+          document.getElementById(id).classList.add('visible');
+        });
+        loadDenialCategories();
+      } else if (type === 'Rejection') {
+        ['accountNumberField','payerFields','rejectionFields','denialRejectionDateField'].forEach(function(id) {
+          document.getElementById(id).classList.add('visible');
+        });
+        loadRejectionCategories();
+      } else if (type === 'Payment') {
+        ['accountNumberField','payerFields','paymentFields'].forEach(function(id) {
+          document.getElementById(id).classList.add('visible');
+        });
+      } else if (type === 'Internal') {
+        document.getElementById('internalFields').classList.add('visible');
+      }
+    }
+
+    function loadProviders() {
+      var practiceSelect = document.getElementById('practice');
+      var selectedOption = practiceSelect.options[practiceSelect.selectedIndex];
+      var practiceId = selectedOption.value;
+      var state = selectedOption.getAttribute('data-state');
+      if (!practiceId) return;
+      selectedPractice = { id: practiceId, state: state, npi: selectedOption.getAttribute('data-npi') };
+
+      google.script.run.withSuccessHandler(function(providers) {
+        var providerSelect = document.getElementById('provider');
+        providerSelect.innerHTML = '<option value="">Select provider...</option>';
+        providers.forEach(function(p) {
+          var opt = document.createElement('option');
+          opt.value = p.npi; opt.textContent = p.name;
+          opt.setAttribute('data-npi', p.npi); opt.setAttribute('data-name', p.name);
+          providerSelect.appendChild(opt);
+        });
+        document.getElementById('providerGroup').style.display = providers.length === 1 ? 'none' : 'block';
+        if (providers.length === 1) providerSelect.value = providers[0].npi;
+      }).getProvidersForForm(practiceId);
+
+      if (state) {
+        google.script.run.withSuccessHandler(function(payers) {
+          var payerSelect = document.getElementById('payer');
+          payerSelect.innerHTML = '<option value="">Select payer...</option>';
+          payers.forEach(function(p) {
+            var opt = document.createElement('option'); opt.value = p; opt.textContent = p;
+            payerSelect.appendChild(opt);
+          });
+        }).getPayersForForm(state);
+      }
+    }
+
+    function loadCoverageTypes() {
+      selectedPayer = document.getElementById('payer').value;
+      if (!selectedPayer) return;
+      google.script.run.withSuccessHandler(function(coverageTypes) {
+        var sel = document.getElementById('coverageType');
+        sel.innerHTML = '<option value="">Select coverage type...</option>';
+        coverageTypes.forEach(function(c) {
+          var opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt);
+        });
+      }).getCoverageTypesByPayer(selectedPayer);
+    }
+
+    function loadPlanTypes() {
+      selectedCoverage = document.getElementById('coverageType').value;
+      if (!selectedCoverage || !selectedPayer) return;
+      google.script.run.withSuccessHandler(function(planTypes) {
+        var sel = document.getElementById('planType');
+        sel.innerHTML = '<option value="">Select plan type...</option>';
+        planTypes.forEach(function(p) {
+          var opt = document.createElement('option'); opt.value = p; opt.textContent = p; sel.appendChild(opt);
+        });
+      }).getPlanTypesByPayerAndCoverage(selectedPayer, selectedCoverage);
+    }
+
+    function loadDenialCategories() {
+      google.script.run.withSuccessHandler(function(categories) {
+        var sel = document.getElementById('denialCategory');
+        sel.innerHTML = '<option value="">Select category...</option>';
+        categories.forEach(function(cat) {
+          var opt = document.createElement('option');
+          opt.value = cat.name; opt.textContent = cat.name;
+          opt.setAttribute('data-rootcause', cat.rootCause);
+          opt.setAttribute('data-action', cat.suggestedAction);
+          sel.appendChild(opt);
+        });
+      }).getDenialCategories();
+    }
+
+    function loadRejectionCategories() {
+      google.script.run.withSuccessHandler(function(categories) {
+        var sel = document.getElementById('rejectionCategory');
+        sel.innerHTML = '<option value="">Select category...</option>';
+        categories.forEach(function(cat) {
+          var opt = document.createElement('option');
+          opt.value = cat.name; opt.textContent = cat.name;
+          opt.setAttribute('data-rootcause', cat.rootCause);
+          opt.setAttribute('data-action', cat.suggestedAction);
+          sel.appendChild(opt);
+        });
+      }).getRejectionCategories();
+    }
+
+    function searchCodes(type) {
+      var inputId = type === 'CARC' ? 'carcCode' : 'rarcCode';
+      var resultsId = type === 'CARC' ? 'carcResults' : 'rarcResults';
+      var query = document.getElementById(inputId).value.trim();
+      if (query.length < 2) { document.getElementById(resultsId).style.display = 'none'; return; }
+      var fn = type === 'CARC' ? 'getCARCMatches' : 'getRARCMatches';
+      google.script.run.withSuccessHandler(function(matches) {
+        var resultsDiv = document.getElementById(resultsId);
+        if (matches.length === 0) {
+          resultsDiv.innerHTML = '<div style="padding:10px;font-size:12px;color:#666;">No matches found. <span style="color:#667eea;cursor:pointer;" onclick="saveNewCode(\'' + type + '\', \'' + query + '\')">+ Add this code</span></div>';
+          resultsDiv.style.display = 'block';
+          return;
+        }
+        var html = '';
+        matches.forEach(function(m) {
+          var label = type === 'CARC' ? '[' + m.groupCode + '] ' + m.code + ' - ' + m.description : m.code + ' - ' + m.description;
+          html += '<div style="padding:10px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;" ' +
+                  'data-code="' + m.code + '" data-desc="' + m.description.replace(/"/g,'&quot;') + '" ' +
+                  'data-group="' + (m.groupCode || '') + '" data-type="' + type + '" onclick="pickCode(this)">' + label + '</div>';
+        });
+        resultsDiv.innerHTML = html;
+        resultsDiv.style.display = 'block';
+      })[fn](query);
+    }
+
+    function pickCode(el) {
+      selectCode(el.getAttribute('data-type'), el.getAttribute('data-code'), el.getAttribute('data-desc'), el.getAttribute('data-group'));
+    }
+
+    function selectCode(type, code, description, groupCode) {
+      var inputId = type === 'CARC' ? 'carcCode' : 'rarcCode';
+      var resultsId = type === 'CARC' ? 'carcResults' : 'rarcResults';
+      var selectedId = type === 'CARC' ? 'carcSelected' : 'rarcSelected';
+      document.getElementById(inputId).value = code;
+      document.getElementById(resultsId).style.display = 'none';
+      var label = type === 'CARC' ? '✓ [' + groupCode + '] ' + code + ' - ' + description : '✓ ' + code + ' - ' + description;
+      document.getElementById(selectedId).innerHTML = label;
+      document.getElementById(selectedId).style.display = 'block';
+      if (type === 'CARC') { carcSelection = { code: code, description: description, groupCode: groupCode }; }
+      else { rarcSelection = { code: code, description: description }; }
+    }
+
+    function saveNewCode(type, query) {
+      var description = prompt('Enter description for ' + type + ' code "' + query + '":');
+      if (!description) return;
+      google.script.run.withSuccessHandler(function() {
+        alert('✅ Code saved! It will appear in future searches.');
+        selectCode(type, query, description, '');
+      }).saveUserCode(type, query, description);
+    }
+
+    function checkGlobalPeriod() {
+      var cpt = document.getElementById('cpt').value.trim();
+      var warningDiv = document.getElementById('globalPeriodWarning');
+      if (cpt.length < 4) { warningDiv.style.display = 'none'; return; }
+      google.script.run.withSuccessHandler(function(result) {
+        if (result && result.days > 0) {
+          warningDiv.innerHTML = '⚠️ <strong>Global Period Alert:</strong> CPT ' + cpt + ' is in a <strong>' + result.days + '-day global period</strong>. When was the last time this code was billed?';
+          warningDiv.style.display = 'block';
+        } else {
+          warningDiv.style.display = 'none';
+        }
+      }).getGlobalPeriodForCPT(cpt);
+    }
+
+    function submitIssue() {
+      if (!selectedType) { alert('Please select an issue type'); return; }
+      var practiceSelect = document.getElementById('practice');
+      var providerSelect = document.getElementById('provider');
+      var issue = {
+        issueType: selectedType,
+        practiceId: selectedPractice ? selectedPractice.id : '',
+        practice: practiceSelect.options[practiceSelect.selectedIndex].text,
+        practiceNPI: selectedPractice ? selectedPractice.npi : '',
+        state: selectedPractice ? selectedPractice.state : '',
+        provider: providerSelect.options[providerSelect.selectedIndex].text,
+        providerNPI: providerSelect.value,
+        priority: 'Auto',
+        assignedTo: document.getElementById('assignedTo').value,
+        notes: document.getElementById('notes').value
+      };
+      if (selectedType !== 'Internal') {
+        issue.payerName = document.getElementById('payer').value;
+        issue.coverageType = document.getElementById('coverageType').value;
+        issue.planType = document.getElementById('planType').value;
+        issue.cpt = document.getElementById('cpt').value;
+        issue.dos = document.getElementById('dos').value;
+        issue.denialRejectionDate = document.getElementById('denialRejectionDate').value;
+        var accountInput = document.getElementById('accountNumberInput').value.trim();
+        if (accountInput) {
+          var start = accountInput.indexOf('CB'), end = accountInput.indexOf('CE', start);
+          issue.accountNumber = (start !== -1 && end !== -1) ? accountInput.substring(start + 2, end) : accountInput;
+        } else { issue.accountNumber = ''; }
+      }
+      if (selectedType === 'Denial') {
+        var catSelect = document.getElementById('denialCategory');
+        issue.denialCategory = catSelect.value;
+        issue.suggestedRootCause = catSelect.options[catSelect.selectedIndex] ? catSelect.options[catSelect.selectedIndex].getAttribute('data-rootcause') : '';
+        issue.denialCode = carcSelection ? carcSelection.code : document.getElementById('carcCode').value;
+        issue.denialCodeGroup = carcSelection ? carcSelection.groupCode : '';
+        issue.rarcCode = rarcSelection ? rarcSelection.code : document.getElementById('rarcCode').value;
+        issue.denialCodeDesc = carcSelection ? carcSelection.description : '';
+        issue.rarcCodeDesc = rarcSelection ? rarcSelection.description : '';
+        issue.additionalCodes = document.getElementById('additionalCodes').value;
+      } else if (selectedType === 'Rejection') {
+        var rejCatSelect = document.getElementById('rejectionCategory');
+        issue.denialCategory = rejCatSelect.value;
+        issue.suggestedRootCause = rejCatSelect.options[rejCatSelect.selectedIndex] ? rejCatSelect.options[rejCatSelect.selectedIndex].getAttribute('data-rootcause') : '';
+        issue.rejectionReason = document.getElementById('rejectionReason').value;
+      } else if (selectedType === 'Payment') {
+        issue.expectedAmount = parseFloat(document.getElementById('expectedAmount').value) || 0;
+        issue.paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
+        issue.paymentType = document.getElementById('paymentType').value;
+      } else if (selectedType === 'Internal') {
+        issue.batchId = document.getElementById('batchId').value;
+        issue.errorType = document.getElementById('errorType').value;
+      }
+      if (!issue.practice) { alert('Practice is required'); return; }
+      google.script.run
+        .withSuccessHandler(function(issueId) {
+          alert('✅ Issue logged successfully!');
+          google.script.host.close();
+          google.script.run.openDashboardSidebar;
+        })
+        .withFailureHandler(function(error) { alert('Error: ' + error); })
+        .logNewIssue(issue);
+    }
+
+    function updateIssue() {
+      var practiceSelect = document.getElementById('practice');
+      var providerSelect = document.getElementById('provider');
+      var issue = {
+        issueType: selectedType,
+        practice: practiceSelect.options[practiceSelect.selectedIndex].text,
+        practiceNPI: selectedPractice ? selectedPractice.npi : '',
+        state: selectedPractice ? selectedPractice.state : '',
+        provider: providerSelect.options[providerSelect.selectedIndex].text,
+        providerNPI: providerSelect.value,
+        assignedTo: document.getElementById('assignedTo').value,
+        payerName: document.getElementById('payer').value || existing.payerName,
+        coverageType: document.getElementById('coverageType').value || existing.coverageType,
+        cpt: document.getElementById('cpt').value,
+        dos: document.getElementById('dos').value,
+        accountNumber: document.getElementById('accountNumberInput').value,
+        denialRejectionDate: document.getElementById('denialRejectionDate').value,
+        denialCategory: document.getElementById('denialCategory').value || document.getElementById('rejectionCategory').value,
+        denialCode: carcSelection ? carcSelection.code : document.getElementById('carcCode').value,
+        denialCodeGroup: carcSelection ? carcSelection.groupCode : existing.carcGroupCode,
+        denialCodeDesc: carcSelection ? carcSelection.description : existing.carcDescription,
+        rarcCode: rarcSelection ? rarcSelection.code : document.getElementById('rarcCode').value,
+        rarcCodeDesc: rarcSelection ? rarcSelection.description : existing.rarcDescription,
+        expectedAmount: parseFloat(document.getElementById('expectedAmount').value) || 0,
+        paidAmount: parseFloat(document.getElementById('paidAmount').value) || 0
+      };
+      google.script.run
+        .withSuccessHandler(function() {
+          alert('✅ Claim updated successfully!');
+          google.script.host.close();
+          google.script.run.openDashboardSidebar;
+        })
+        .withFailureHandler(function(error) { alert('Error: ' + error); })
+        .updateIssue(editRow, issue);
+    }
+  </script>
+</body>
+</html>

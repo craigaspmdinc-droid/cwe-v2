@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claims Workflow Engine V2.0 — Training Center</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #21262d;
+    --surface3: #30363d;
+    --border:   #30363d;
+    --accent:   #58a6ff;
+    --accent2:  #3fb950;
+    --warn:     #d29922;
+    --danger:   #f85149;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── LAYOUT ── */
+  #app { display: flex; height: 100vh; overflow: hidden; }
+
+  #nav {
+    width: 240px;
+    min-width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  #nav-header {
+    padding: 20px 16px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  #nav-header .logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  #nav-header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .nav-section { padding: 12px 0 4px; }
+  .nav-section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 16px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(88,166,255,0.08);
+  }
+  .nav-item .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress-bar {
+    height: 3px;
+    background: var(--surface3);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  #progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* ── PAGES ── */
+  .page { display: none; padding: 36px 40px 60px; max-width: 820px; }
+  .page.active { display: block; }
+
+  .page-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  .page h2 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .page .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card p, .card li { font-size: 13px; color: #cdd9e5; line-height: 1.7; }
+  .card ul { padding-left: 18px; }
+  .card ul li { margin-bottom: 4px; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+  .callout.info    { background: rgba(88,166,255,0.1);  border: 1px solid rgba(88,166,255,0.3); }
+  .callout.success { background: rgba(63,185,80,0.1);   border: 1px solid rgba(63,185,80,0.3); }
+  .callout.warn    { background: rgba(210,153,34,0.1);  border: 1px solid rgba(210,153,34,0.3); }
+  .callout.danger  { background: rgba(248,81,73,0.1);   border: 1px solid rgba(248,81,73,0.3); }
+
+  /* ── STEPS ── */
+  .steps { counter-reset: step; }
+  .step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .step::before {
+    content: '';
+    position: absolute;
+    left: 17px;
+    top: 34px;
+    width: 2px;
+    height: calc(100% + 2px);
+    background: var(--border);
+  }
+  .step:last-child::before { display: none; }
+  .step-num {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    counter-increment: step;
+    z-index: 1;
+  }
+  .step-num::after { content: counter(step); }
+  .step-body { padding-top: 7px; flex: 1; }
+  .step-title {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .step-desc { font-size: 13px; color: var(--muted); }
+
+  /* ── WORKFLOW SIMULATOR ── */
+  #simulator-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .sim-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .sim-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .sim-dot.red    { background: #ff5f57; }
+  .sim-dot.yellow { background: #ffbd2e; }
+  .sim-dot.green  { background: #28c840; }
+
+  .sim-body { padding: 20px; }
+
+  .scenario-select {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .scenario-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .scenario-btn:hover { border-color: var(--accent); background: rgba(88,166,255,0.06); }
+  .scenario-btn.selected { border-color: var(--accent); background: rgba(88,166,255,0.1); }
+  .scenario-btn .s-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .scenario-btn .s-title { font-size: 13px; font-weight: 600; margin: 4px 0 2px; }
+  .scenario-btn .s-desc { font-size: 12px; color: var(--muted); }
+
+  /* ── CLAIM CARD ── */
+  .claim-display {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .claim-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 4px 10px;
+    margin-bottom: 4px;
+  }
+  .claim-key { color: var(--muted); }
+  .claim-val { color: var(--text); }
+  .claim-val.highlight { color: var(--warn); font-weight: 600; }
+  .claim-val.error     { color: var(--danger); font-weight: 600; }
+  .claim-val.ok        { color: var(--accent2); }
+
+  /* ── SIM STEP DISPLAY ── */
+  .sim-step-area { min-height: 160px; }
+  .sim-question {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+  .sim-choices { display: flex; flex-direction: column; gap: 8px; }
+  .sim-choice {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sim-choice:hover { border-color: var(--accent); background: rgba(88,166,255,0.06); }
+  .sim-choice.correct { border-color: var(--accent2)!important; background: rgba(63,185,80,0.12)!important; }
+  .sim-choice.wrong   { border-color: var(--danger)!important;  background: rgba(248,81,73,0.1)!important; }
+  .choice-letter {
+    width: 22px; height: 22px; min-width: 22px;
+    border-radius: 50%;
+    background: var(--surface3);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .sim-choice.correct .choice-letter { background: var(--accent2); color: var(--bg); }
+  .sim-choice.wrong   .choice-letter { background: var(--danger);  color: #fff; }
+
+  .sim-feedback {
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-top: 12px;
+    display: none;
+  }
+  .sim-feedback.show { display: block; }
+  .sim-feedback.correct { background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.3); color: #7ee787; }
+  .sim-feedback.wrong   { background: rgba(248,81,73,0.1);  border: 1px solid rgba(248,81,73,0.3);  color: #ffa198; }
+
+  .sim-nav {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: flex-end;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-primary:hover { background: #79c0ff; }
+  .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── QUIZ ── */
+  .quiz-q {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .quiz-q .q-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .quiz-q .q-text { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-bottom: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+  }
+  .quiz-option:hover { border-color: var(--accent); }
+  .quiz-option.selected { border-color: var(--accent); background: rgba(88,166,255,0.1); }
+  .quiz-option.correct  { border-color: var(--accent2)!important; background: rgba(63,185,80,0.1)!important; }
+  .quiz-option.wrong    { border-color: var(--danger)!important;  background: rgba(248,81,73,0.08)!important; }
+  .q-radio {
+    width: 16px; height: 16px; min-width: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    transition: all 0.15s;
+  }
+  .quiz-option.selected .q-radio { border-color: var(--accent); background: var(--accent); }
+  .quiz-option.correct  .q-radio { border-color: var(--accent2); background: var(--accent2); }
+  .quiz-option.wrong    .q-radio { border-color: var(--danger);  background: var(--danger); }
+
+  /* ── RESULT BADGE ── */
+  .score-circle {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-family: var(--mono);
+  }
+  .score-circle.pass  { background: rgba(63,185,80,0.12);  border: 3px solid var(--accent2); }
+  .score-circle.fail  { background: rgba(248,81,73,0.08);  border: 3px solid var(--danger); }
+  .score-circle .score-num { font-size: 28px; font-weight: 700; }
+  .score-circle .score-pct { font-size: 11px; color: var(--muted); }
+
+  /* ── REFERENCE TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 12px 0;
+  }
+  th {
+    background: var(--surface2);
+    padding: 8px 12px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: #cdd9e5;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .code-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--surface3);
+    padding: 2px 7px;
+    border-radius: 3px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* ── ROLE BADGE ── */
+  .role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .role-badge.biller     { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .role-badge.supervisor { background: rgba(210,153,34,0.15); color: var(--warn); }
+  .role-badge.both       { background: rgba(63,185,80,0.12);  color: var(--accent2); }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .tab {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── MISC ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .muted { color: var(--muted); }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+  .tag-blue   { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .tag-green  { background: rgba(63,185,80,0.12);  color: var(--accent2); }
+  .tag-yellow { background: rgba(210,153,34,0.15); color: var(--warn); }
+  .tag-red    { background: rgba(248,81,73,0.12);  color: var(--danger); }
+
+  h4 { font-size: 13px; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
+  p  { font-size: 13px; color: #cdd9e5; margin-bottom: 10px; }
+
+  .welcome-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .welcome-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .welcome-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .welcome-card .wc-icon { font-size: 24px; margin-bottom: 8px; }
+  .welcome-card .wc-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .welcome-card .wc-desc { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── NAVIGATION ── -->
+<nav id="nav">
+  <div id="nav-header">
+    <div class="logo">CWE V2.0</div>
+    <h1>Training Center</h1>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Start Here</div>
+    <div class="nav-item active" onclick="showPage('welcome')" data-page="welcome">
+      <span class="nav-icon">🏠</span> Welcome
+    </div>
+    <div class="nav-item" onclick="showPage('overview')" data-page="overview">
+      <span class="nav-icon">📋</span> System Overview
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">User Manual</div>
+    <div class="nav-item" onclick="showPage('manual-nav')" data-page="manual-nav">
+      <span class="nav-icon">🧭</span> Navigation
+    </div>
+    <div class="nav-item" onclick="showPage('manual-sidebar')" data-page="manual-sidebar">
+      <span class="nav-icon">📎</span> Sidebar Guide
+    </div>
+    <div class="nav-item" onclick="showPage('manual-mac')" data-page="manual-mac">
+      <span class="nav-icon">🏥</span> MAC Lookup
+    </div>
+    <div class="nav-item" onclick="showPage('manual-carc')" data-page="manual-carc">
+      <span class="nav-icon">⚡</span> CARC Actions
+    </div>
+    <div class="nav-item" onclick="showPage('manual-stages')" data-page="manual-stages">
+      <span class="nav-icon">🔄</span> Workflow Stages
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Role Tutorials</div>
+    <div class="nav-item" onclick="showPage('role-biller')" data-page="role-biller">
+      <span class="nav-icon">👤</span> Biller Workflow
+    </div>
+    <div class="nav-item" onclick="showPage('role-supervisor')" data-page="role-supervisor">
+      <span class="nav-icon">👑</span> Supervisor Workflow
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Scenarios</div>
+    <div class="nav-item" onclick="showPage('sim')" data-page="sim">
+      <span class="nav-icon">🎮</span> Interactive Scenarios
+    </div>
+    <div class="nav-item" onclick="showPage('walkthrough')" data-page="walkthrough">
+      <span class="nav-icon">🚶</span> Full Walkthroughs
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Reference</div>
+    <div class="nav-item" onclick="showPage('ref-carc')" data-page="ref-carc">
+      <span class="nav-icon">📖</span> CARC Reference
+    </div>
+    <div class="nav-item" onclick="showPage('ref-mac')" data-page="ref-mac">
+      <span class="nav-icon">🗺️</span> MAC Reference
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Assessment</div>
+    <div class="nav-item" onclick="showPage('quiz')" data-page="quiz">
+      <span class="nav-icon">🎓</span> Knowledge Quiz
+    </div>
+  </div>
+</nav>
+
+<!-- ── CONTENT ── -->
+<main id="content">
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: WELCOME
+  ══════════════════════════════════════════════ -->
+  <div class="page active" id="page-welcome">
+    <div class="page-tag">Claims Workflow Engine V2.0</div>
+    <h2>Welcome to Training</h2>
+    <p class="subtitle">Everything you need to confidently use the Claims Workflow Engine — from first claim to final resolution.</p>
+
+    <div class="welcome-grid">
+      <div class="welcome-card" onclick="showPage('overview')">
+        <div class="wc-icon">📋</div>
+        <div class="wc-title">New? Start with the Overview</div>
+        <div class="wc-desc">Understand what the system does and how it fits into your billing workflow.</div>
+      </div>
+      <div class="welcome-card" onclick="showPage('role-biller')">
+        <div class="wc-icon">👤</div>
+        <div class="wc-title">Biller Tutorial</div>
+        <div class="wc-desc">Step-by-step guidance for working claims, checking CARC codes, and advancing stages.</div>
+      </div>
+      <div class="welcome-card" onclick="showPage('role-supervisor')">
+        <div class="wc-icon">👑</div>
+        <div class="wc-title">Supervisor Tutorial</div>
+        <div class="wc-desc">Escalation review, denial trend analysis, and queue management.</div>
+      </div>
+      <div class="welcome-card" onclick="showPage('sim')">
+        <div class="wc-icon">🎮</div>
+        <div class="wc-title">Practice Scenarios</div>
+        <div class="wc-desc">Work through real claim situations with instant feedback on your decisions.</div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">💡</span>
+      <div>This training tool is fully self-contained — no internet or Google Sheets connection needed. Use the navigation on the left to move between sections. Your quiz score is tracked automatically.</div>
+    </div>
+
+    <h4>What's Covered</h4>
+    <div class="card">
+      <ul>
+        <li>Full system navigation and sidebar usage</li>
+        <li>MAC lookup for Medicare claims (new in V2.0)</li>
+        <li>CARC action guidance — what to do with each denial code (new in V2.0)</li>
+        <li>All workflow stages: New → Working → Escalated → Resolved/Closed</li>
+        <li>Role-specific tutorials for billers and supervisors</li>
+        <li>Interactive scenarios with 4 real workflow types</li>
+        <li>15-question knowledge quiz with pass certificate</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: SYSTEM OVERVIEW
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-overview">
+    <div class="page-tag">System Overview</div>
+    <h2>What is the Claims Workflow Engine?</h2>
+    <p class="subtitle">A Google Sheets-based claims management system that guides billing staff through every step of claim resolution.</p>
+
+    <div class="card">
+      <h3>🎯 Purpose</h3>
+      <p>The Claims Workflow Engine V2.0 (CWE) standardizes how your organization handles denied, pended, and underpaid claims. It replaces ad-hoc tracking with a structured, auditable process that every team member follows the same way.</p>
+    </div>
+
+    <div class="card">
+      <h3>🗂️ Core Components</h3>
+      <ul>
+        <li><strong>Claims Sheet</strong> — Main working area; one row per claim</li>
+        <li><strong>Sidebar Panel</strong> — Context-sensitive guidance for the selected claim</li>
+        <li><strong>REF-CARC Sheet</strong> — Lookup table for denial codes and actions</li>
+        <li><strong>REF-MACs Sheet</strong> — State-to-MAC mapping for Medicare claims</li>
+        <li><strong>REF-Payers Sheet</strong> — Payer-specific rules and contacts</li>
+        <li><strong>Workflow Guide</strong> — Decision trees embedded in the sidebar</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🔄 Claim Lifecycle</h3>
+      <p>Every claim moves through defined stages. The system enforces valid transitions and logs timestamps at each stage change.</p>
+      <div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+        <span class="tag tag-blue">NEW</span>
+        <span class="muted">→</span>
+        <span class="tag tag-yellow">WORKING</span>
+        <span class="muted">→</span>
+        <span class="tag tag-red">ESCALATED</span>
+        <span class="muted">→</span>
+        <span class="tag tag-green">RESOLVED</span>
+        <span class="muted">or</span>
+        <span class="tag" style="background:var(--surface3); color:var(--muted);">CLOSED</span>
+      </div>
+      <p style="margin-top:10px; margin-bottom:0;">Claims can also move to <strong>PENDING INFO</strong> when waiting on documentation, or <strong>APPEALED</strong> when a formal appeal is submitted.</p>
+    </div>
+
+    <div class="card">
+      <h3>✨ New in V2.0</h3>
+      <ul>
+        <li><strong>MAC Lookup</strong> — Medicare claims now auto-display the Part B and DME MAC for the practice state, so billers know exactly who to call</li>
+        <li><strong>CARC Actions</strong> — Each denial code now surfaces a specific recommended action in the sidebar header — no more hunting through policy docs</li>
+        <li><strong>Improved Escalation Routing</strong> — Escalated claims auto-assign to supervisor queue with aging alerts</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: MANUAL — NAVIGATION
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-manual-nav">
+    <div class="page-tag">User Manual</div>
+    <h2>Navigating the System</h2>
+    <p class="subtitle">How to open and move around the Claims Workflow Engine in Google Sheets.</p>
+
+    <h4>Opening the System</h4>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Open the Google Sheet</div>
+          <div class="step-desc">Navigate to the shared "Claims Workflow Engine V2.0" spreadsheet in Google Drive. Bookmark it for easy access.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Open the Sidebar</div>
+          <div class="step-desc">Go to <strong>Extensions → Claims Workflow → Open Sidebar</strong>. The sidebar will open on the right side of your screen.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Select a Claim Row</div>
+          <div class="step-desc">Click any cell in a claim row. The sidebar automatically loads information for that claim, including CARC action guidance and (for Medicare) MAC info.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Work the Claim</div>
+          <div class="step-desc">Follow the guidance in the sidebar. Use the action buttons to advance the stage, add notes, or escalate.</div>
+        </div>
+      </div>
+    </div>
+
+    <h4>Sheet Tabs</h4>
+    <table>
+      <thead><tr><th>Tab Name</th><th>Purpose</th><th>Who Edits</th></tr></thead>
+      <tbody>
+        <tr><td>CLAIMS</td><td>Main working claims list</td><td>Everyone</td></tr>
+        <tr><td>REF-CARC</td><td>Denial code reference — do not edit</td><td>Supervisor only</td></tr>
+        <tr><td>REF-MACs</td><td>Medicare MAC by state — do not edit</td><td>Supervisor only</td></tr>
+        <tr><td>REF-Payers</td><td>Payer contact info and rules</td><td>Supervisor only</td></tr>
+        <tr><td>REPORTS</td><td>Auto-generated summary dashboards</td><td>Read only</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div>Never edit REF-CARC, REF-MACs, or REF-Payers directly unless you are a supervisor maintaining the reference data. Changes to these sheets affect all users immediately.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: MANUAL — SIDEBAR
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-manual-sidebar">
+    <div class="page-tag">User Manual</div>
+    <h2>Using the Sidebar</h2>
+    <p class="subtitle">The sidebar is your control center for each claim. It surfaces everything you need in one place.</p>
+
+    <h4>Sidebar Sections</h4>
+
+    <div class="card">
+      <h3>📌 Claim Header</h3>
+      <p>The top section shows key claim identifiers: Claim ID, Patient Name, DOS, Payer, and current Stage. The stage badge updates in real time as the claim progresses.</p>
+    </div>
+
+    <div class="card">
+      <h3>⚡ CARC Action Banner <span class="tag tag-blue" style="font-size:10px;">NEW V2.0</span></h3>
+      <p>When a claim has a CARC (Claim Adjustment Reason Code), the sidebar now shows three pieces of information:</p>
+      <ul>
+        <li><strong>CARC Code</strong> — The numeric denial reason (e.g. <span class="mono">CO-16</span>)</li>
+        <li><strong>CARC Description</strong> — Plain English explanation of the denial</li>
+        <li><strong>⚡ Action</strong> — A specific recommended next step, pulled directly from your REF-CARC reference table. This appears as an orange highlighted banner between the description and the Stage field.</li>
+      </ul>
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div>If no CARC action is configured for a code, the Action field is hidden — it only appears when actionable guidance exists.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🏥 MAC Information <span class="tag tag-blue" style="font-size:10px;">NEW V2.0</span></h3>
+      <p>For Medicare claims only, the sidebar now shows a "Medicare Administrative Contractors" section displaying the <strong>Part B MAC</strong> and <strong>DME MAC</strong> for the practice's state. This section is hidden for all non-Medicare payers.</p>
+      <p>Use the MAC name and jurisdiction code when calling for claim status or submitting reopening requests.</p>
+    </div>
+
+    <div class="card">
+      <h3>📝 Notes & Actions</h3>
+      <p>The bottom of the sidebar contains:</p>
+      <ul>
+        <li><strong>Notes field</strong> — Timestamped audit trail for all actions taken</li>
+        <li><strong>Stage Advance buttons</strong> — Move the claim forward (only valid next stages are shown)</li>
+        <li><strong>Escalate button</strong> — Routes to supervisor queue with required note prompt</li>
+        <li><strong>Close button</strong> — Marks as unworkable with required reason code</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: MANUAL — MAC LOOKUP
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-manual-mac">
+    <div class="page-tag">User Manual — New Feature</div>
+    <h2>MAC Lookup</h2>
+    <p class="subtitle">How the system finds your Medicare Administrative Contractor information automatically.</p>
+
+    <div class="callout info">
+      <span class="callout-icon">🔍</span>
+      <div>MAC information only appears when the Payer Type for a claim is set to <strong>Medicare</strong>. For all other payers, this section stays hidden.</div>
+    </div>
+
+    <h4>What is a MAC?</h4>
+    <div class="card">
+      <p>Medicare Administrative Contractors (MACs) are private companies that Medicare has paid to process Medicare claims. There are two types relevant to billing:</p>
+      <ul>
+        <li><strong>Part B MAC</strong> — Processes outpatient professional services (physician and supplier claims). Contact for claim status, reopenings, redeterminations.</li>
+        <li><strong>DME MAC</strong> — Processes durable medical equipment, prosthetics, orthotics, and supplies. Only relevant for DME claims.</li>
+      </ul>
+      <p style="margin-top:10px; margin-bottom:0;">Each MAC covers specific states and is identified by a <strong>Jurisdiction code</strong> (e.g., Jurisdiction J — Palmetto GBA covers GA, KY, NC, SC, VA, WV).</p>
+    </div>
+
+    <h4>How the Lookup Works</h4>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Payer type is checked</div>
+          <div class="step-desc">When you select a claim row, the sidebar reads the Payer Type field. If it's not "Medicare," the MAC section stays hidden.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Practice state is read</div>
+          <div class="step-desc">The system reads the practice state from the claim record (2-letter abbreviation).</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">REF-MACs table is queried</div>
+          <div class="step-desc">The <code>getMACsForState()</code> function scans the REF-MACs reference sheet for a matching state and returns the Part B and DME MAC names and jurisdiction codes.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Results display in sidebar</div>
+          <div class="step-desc">The MAC section appears with both MAC names and their jurisdiction codes, formatted as cards for quick scanning.</div>
+        </div>
+      </div>
+    </div>
+
+    <h4>Troubleshooting</h4>
+    <table>
+      <thead><tr><th>Problem</th><th>Likely Cause</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>MAC section not showing for Medicare claim</td>
+          <td>Practice state column is blank</td>
+          <td>Enter the 2-letter state abbreviation in the practice state field</td>
+        </tr>
+        <tr>
+          <td>"Practice state not set" warning</td>
+          <td>Same as above</td>
+          <td>Fill in practice state field</td>
+        </tr>
+        <tr>
+          <td>MAC shows wrong state</td>
+          <td>Wrong state in practice state field</td>
+          <td>Verify the state abbreviation matches the billing address</td>
+        </tr>
+        <tr>
+          <td>MAC section hidden even though claim is Medicare</td>
+          <td>Payer Type field not exactly "Medicare"</td>
+          <td>Check payer type is not "Medicare Advantage" or misspelled</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: MANUAL — CARC ACTIONS
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-manual-carc">
+    <div class="page-tag">User Manual — New Feature</div>
+    <h2>CARC Actions</h2>
+    <p class="subtitle">How the system guides you to the right next step for each denial reason code.</p>
+
+    <div class="card">
+      <h3>📖 What is a CARC?</h3>
+      <p>A <strong>Claim Adjustment Reason Code (CARC)</strong> is a standardized code that payers attach to remittance advice to explain why a claim was adjusted or denied. Examples:</p>
+      <table>
+        <thead><tr><th>Code</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="code-pill">CO-4</span></td><td>The procedure code is inconsistent with the modifier</td></tr>
+          <tr><td><span class="code-pill">CO-16</span></td><td>Claim/service lacks information which is needed for adjudication</td></tr>
+          <tr><td><span class="code-pill">CO-18</span></td><td>Exact duplicate claim/service</td></tr>
+          <tr><td><span class="code-pill">CO-45</span></td><td>Charges exceed your contracted/legislated fee arrangement</td></tr>
+          <tr><td><span class="code-pill">CO-97</span></td><td>The benefit for this service is included in the payment/allowance for another service/procedure</td></tr>
+          <tr><td><span class="code-pill">PR-1</span></td><td>Deductible amount</td></tr>
+          <tr><td><span class="code-pill">PR-2</span></td><td>Coinsurance amount</td></tr>
+          <tr><td><span class="code-pill">PR-3</span></td><td>Co-payment amount</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>How CARC Actions Work in V2.0</h4>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Payer posts an EOB/ERA</div>
+          <div class="step-desc">When a claim is denied or adjusted, enter the CARC code from the remittance into the CARC field on the claim row.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">System looks up the code</div>
+          <div class="step-desc">The <code>getIssueData()</code> function calls <code>getCARCAction()</code> which scans Column E of the REF-CARC sheet for the suggested action for that specific code.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Action displays in sidebar</div>
+          <div class="step-desc">The orange "⚡ Action" banner appears between the CARC Description and the Stage field. It tells you exactly what to do — no policy manual needed.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">You take the action</div>
+          <div class="step-desc">Follow the guidance, document your action in the Notes field, then advance the stage or escalate as appropriate.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div>CARC actions in the REF-CARC sheet are maintained by your supervisor. If you believe an action is wrong or missing for a code, notify your supervisor — do not edit the REF-CARC sheet yourself.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: MANUAL — WORKFLOW STAGES
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-manual-stages">
+    <div class="page-tag">User Manual</div>
+    <h2>Workflow Stages</h2>
+    <p class="subtitle">Understanding the lifecycle of a claim and valid stage transitions.</p>
+
+    <table>
+      <thead><tr><th>Stage</th><th>Meaning</th><th>Who Sets It</th><th>Next Valid Stages</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-blue">NEW</span></td>
+          <td>Claim just entered system, not yet reviewed</td>
+          <td>System (auto)</td>
+          <td>WORKING, CLOSED</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-yellow">WORKING</span></td>
+          <td>Biller is actively working the claim</td>
+          <td>Biller</td>
+          <td>PENDING INFO, APPEALED, ESCALATED, RESOLVED, CLOSED</td>
+        </tr>
+        <tr>
+          <td><span class="tag" style="background:rgba(88,166,255,0.15);color:#79c0ff">PENDING INFO</span></td>
+          <td>Waiting on documentation or info from patient/provider</td>
+          <td>Biller</td>
+          <td>WORKING, CLOSED</td>
+        </tr>
+        <tr>
+          <td><span class="tag" style="background:rgba(188,140,255,0.15);color:#d2a8ff">APPEALED</span></td>
+          <td>Formal appeal submitted</td>
+          <td>Biller / Supervisor</td>
+          <td>WORKING, RESOLVED, CLOSED</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-red">ESCALATED</span></td>
+          <td>Needs supervisor review</td>
+          <td>Biller</td>
+          <td>WORKING, APPEALED, RESOLVED, CLOSED</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-green">RESOLVED</span></td>
+          <td>Claim paid correctly; no further action needed</td>
+          <td>Biller / Supervisor</td>
+          <td>(terminal — reopen with WORKING if needed)</td>
+        </tr>
+        <tr>
+          <td><span class="tag" style="background:var(--surface3);color:var(--muted)">CLOSED</span></td>
+          <td>Claim written off or deemed unworkable</td>
+          <td>Supervisor approval required</td>
+          <td>(terminal)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div>The system only shows buttons for valid next stages based on the claim's current stage. You cannot skip stages or go backward without supervisor override.</div>
+    </div>
+
+    <h4>Stage Change Rules</h4>
+    <div class="card">
+      <ul>
+        <li>Every stage change is <strong>timestamped and logged</strong> with the user's email</li>
+        <li>Moving to <strong>ESCALATED</strong> requires a note explaining why</li>
+        <li>Moving to <strong>CLOSED</strong> requires supervisor approval and a close reason code</li>
+        <li>Moving to <strong>RESOLVED</strong> requires a payment amount entry</li>
+        <li>Claims open longer than <strong>30 days</strong> trigger an aging alert in the supervisor dashboard</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: ROLE — BILLER
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-role-biller">
+    <div class="page-tag">Role Tutorial</div>
+    <h2>Biller Workflow</h2>
+    <p class="subtitle"><span class="role-badge biller">👤 Biller</span> &nbsp; Your daily process for working the claims queue.</p>
+
+    <h4>Daily Startup</h4>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Filter to your assigned claims</div>
+          <div class="step-desc">Use the filter on Column "Assigned To" to see only your claims. Sort by Days Open (descending) to prioritize oldest claims first.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Prioritize by urgency</div>
+          <div class="step-desc">Work claims in this order: (1) ESCALATED responses due, (2) PENDING INFO follow-ups, (3) NEW claims within timely filing window, (4) WORKING claims aged 15+ days.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Open the sidebar</div>
+          <div class="step-desc">Extensions → Claims Workflow → Open Sidebar. Keep it open all day.</div>
+        </div>
+      </div>
+    </div>
+
+    <h4>Working a Denied Claim</h4>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Select the claim row</div>
+          <div class="step-desc">The sidebar loads automatically. Review the Claim Header for payer, DOS, and billed amount.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Enter the CARC code from the EOB</div>
+          <div class="step-desc">Type the CARC code into the designated column. The sidebar immediately shows the code description and the recommended action.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Read the ⚡ Action guidance</div>
+          <div class="step-desc">The orange action banner tells you exactly what to do. Follow it. If the guidance says "Resubmit with corrected modifier," do that. If it says "Obtain patient authorization on file," request that.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">For Medicare: check MAC info</div>
+          <div class="step-desc">If the claim is Medicare, the MAC section shows your Part B MAC name and jurisdiction. Call that MAC's provider line for real-time claim status.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Document your action in Notes</div>
+          <div class="step-desc">Always enter a note before advancing the stage: what you did, who you spoke to, reference/confirmation numbers.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Advance the stage or escalate</div>
+          <div class="step-desc">Use the stage buttons in the sidebar. If you cannot resolve the claim yourself, use "Escalate" and describe why in the prompt.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">📋</span>
+      <div><strong>Timely filing rule:</strong> Know your payers' filing deadlines. Most commercial payers allow 90–180 days from DOS. Medicare allows 1 year. Flag claims within 30 days of their deadline as HIGH PRIORITY immediately.</div>
+    </div>
+
+    <h4>When to Escalate</h4>
+    <div class="card">
+      <ul>
+        <li>Claim involves a charge over $500 and has been denied twice</li>
+        <li>CARC action guidance says "Supervisor review required"</li>
+        <li>You believe the payer made an error but need authority to appeal</li>
+        <li>Claim is within 15 days of timely filing deadline and not yet resolved</li>
+        <li>Patient has contacted the office about the claim</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: ROLE — SUPERVISOR
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-role-supervisor">
+    <div class="page-tag">Role Tutorial</div>
+    <h2>Supervisor Workflow</h2>
+    <p class="subtitle"><span class="role-badge supervisor">👑 Supervisor</span> &nbsp; Managing the queue, handling escalations, and maintaining reference data.</p>
+
+    <h4>Daily Supervisor Tasks</h4>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Review the REPORTS tab</div>
+          <div class="step-desc">Check the daily dashboard: escalated claim count, aging summary, top denial codes, and team productivity.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Work the ESCALATED queue</div>
+          <div class="step-desc">Filter the CLAIMS sheet to Stage = ESCALATED. Review each claim's note history. Take action or reassign within 24 hours of escalation.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <div class="step-title">Review aging alerts</div>
+          <div class="step-desc">Claims aged 30+ days appear highlighted. Verify they are actively being worked and have notes. Reassign if stale.</div>
+        </div>
+      </div>
+    </div>
+
+    <h4>Maintaining Reference Data</h4>
+    <div class="card">
+      <h3>Updating CARC Actions (REF-CARC Column E)</h3>
+      <p>When you identify that a CARC action needs updating:</p>
+      <ul>
+        <li>Go to the REF-CARC sheet</li>
+        <li>Find the row for the CARC code (Column A)</li>
+        <li>Edit Column E with the updated suggested action</li>
+        <li>The change takes effect immediately for all new sidebar loads</li>
+        <li>Document the change in the "Notes" column (if present) with date and your initials</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Updating MAC Data (REF-MACs)</h3>
+      <p>CMS periodically reassigns MAC jurisdictions. When this happens:</p>
+      <ul>
+        <li>Check <strong>cms.gov</strong> for the updated MAC assignment list</li>
+        <li>Update the REF-MACs sheet: Column C (Part B Name), D (Part B J-Code), E (DME Name), F (DME J-Code)</li>
+        <li>Test by selecting a Medicare claim from an affected state and verifying the sidebar shows the correct MAC</li>
+      </ul>
+    </div>
+
+    <h4>Closing Claims</h4>
+    <div class="card">
+      <p>Only supervisors can move claims to CLOSED. When a biller requests a close:</p>
+      <ul>
+        <li>Review the note history to confirm sufficient work was done</li>
+        <li>Select a Close Reason Code from the dropdown</li>
+        <li>Add a supervisor note with your decision</li>
+        <li>Advance to CLOSED — this action cannot be reversed without contacting IT</li>
+      </ul>
+    </div>
+
+    <h4>Trend Analysis</h4>
+    <div class="callout info">
+      <span class="callout-icon">📊</span>
+      <div>Use the REPORTS tab weekly to identify top CARC codes by volume and dollar amount. If CO-16 ("missing information") is your #1 denial, that's a front-end data entry problem. Address root causes, not just individual claims.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: INTERACTIVE SCENARIOS
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-sim">
+    <div class="page-tag">Interactive Scenarios</div>
+    <h2>Practice Scenarios</h2>
+    <p class="subtitle">Work through real claim situations. Choose a scenario to start.</p>
+
+    <div id="sim-home">
+      <div class="scenario-select" id="scenario-select">
+        <div class="scenario-btn" onclick="startScenario('medicare')" id="scen-medicare">
+          <div class="s-tag">Medicare</div>
+          <div class="s-title">Missing Modifier Denial</div>
+          <div class="s-desc">CO-4 denial from Novitas Solutions. Practice using MAC lookup and CARC guidance.</div>
+        </div>
+        <div class="scenario-btn" onclick="startScenario('commercial')" id="scen-commercial">
+          <div class="s-tag">Commercial</div>
+          <div class="s-title">Duplicate Claim</div>
+          <div class="s-desc">CO-18 denial from BCBS. Identify and resolve a duplicate submission.</div>
+        </div>
+        <div class="scenario-btn" onclick="startScenario('auth')" id="scen-auth">
+          <div class="s-tag">Commercial</div>
+          <div class="s-title">Missing Authorization</div>
+          <div class="s-desc">CO-197 denial. Navigate the authorization verification and resubmission process.</div>
+        </div>
+        <div class="scenario-btn" onclick="startScenario('timely')" id="scen-timely">
+          <div class="s-tag">High Priority</div>
+          <div class="s-title">Timely Filing Risk</div>
+          <div class="s-desc">Claim approaching deadline. Practice prioritization and escalation decisions.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="simulator-container" style="display:none;">
+      <div class="sim-header">
+        <div class="sim-dot red"></div>
+        <div class="sim-dot yellow"></div>
+        <div class="sim-dot green"></div>
+        <span id="sim-title" style="margin-left:8px;">Scenario</span>
+        <span id="sim-progress" style="margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--muted);">Step 1 of 4</span>
+      </div>
+      <div class="sim-body">
+        <div class="claim-display" id="sim-claim-display"></div>
+        <div class="sim-step-area">
+          <div class="sim-question" id="sim-question"></div>
+          <div class="sim-choices" id="sim-choices"></div>
+          <div class="sim-feedback" id="sim-feedback"></div>
+        </div>
+        <div class="sim-nav">
+          <button class="btn btn-secondary" onclick="exitScenario()">← Back to Scenarios</button>
+          <button class="btn btn-primary" id="sim-next-btn" onclick="simNext()" disabled>Next Step →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: WALKTHROUGHS
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-walkthrough">
+    <div class="page-tag">Full Walkthroughs</div>
+    <h2>Workflow Walkthroughs</h2>
+    <p class="subtitle">End-to-end examples of common claim scenarios with every step shown.</p>
+
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('wt', 'denial')">Denial & Resubmit</div>
+      <div class="tab" onclick="switchTab('wt', 'appeal')">Appeal</div>
+      <div class="tab" onclick="switchTab('wt', 'medicare')">Medicare CO-16</div>
+      <div class="tab" onclick="switchTab('wt', 'close')">Write-off Close</div>
+    </div>
+
+    <div class="tab-panel active" id="wt-denial">
+      <h4>Scenario: Commercial Claim Denied CO-4 (Modifier Mismatch)</h4>
+      <div class="claim-display">
+        <div class="claim-row"><span class="claim-key">Claim ID:</span><span class="claim-val">CL-2024-00447</span></div>
+        <div class="claim-row"><span class="claim-key">Patient:</span><span class="claim-val">Johnson, Patricia</span></div>
+        <div class="claim-row"><span class="claim-key">DOS:</span><span class="claim-val">2024-11-14</span></div>
+        <div class="claim-row"><span class="claim-key">Payer:</span><span class="claim-val">Aetna</span></div>
+        <div class="claim-row"><span class="claim-key">CPT:</span><span class="claim-val">99214-25</span></div>
+        <div class="claim-row"><span class="claim-key">Billed:</span><span class="claim-val">$275.00</span></div>
+        <div class="claim-row"><span class="claim-key">CARC:</span><span class="claim-val highlight">CO-4</span></div>
+        <div class="claim-row"><span class="claim-key">⚡ Action:</span><span class="claim-val highlight">Verify modifier with provider. If -25 appropriate, resubmit with operative note. If not, resubmit without modifier.</span></div>
+        <div class="claim-row"><span class="claim-key">Stage:</span><span class="claim-val">NEW</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Advance to WORKING</div>
+            <div class="step-desc">Click "Start Working" in the sidebar. Add note: "CO-4 denial received. Reviewing modifier usage."</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Verify with provider</div>
+            <div class="step-desc">Contact the billing provider or pull the original encounter note. Confirm whether the -25 modifier (significant separate E&M same day as procedure) was correctly appended.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Correct and resubmit</div>
+            <div class="step-desc">If modifier was correct: resubmit with the operative note attached per Aetna's requirements. If modifier was incorrect: resubmit CPT 99214 without the -25 modifier.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Document and advance to APPEALED</div>
+            <div class="step-desc">Note: "Resubmitted 2024-11-19 with corrected claim. Ref# 447892. Modifier -25 confirmed appropriate per attached note." Advance stage to APPEALED.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Follow up and resolve</div>
+            <div class="step-desc">When payment posts, advance to RESOLVED. Enter payment amount. Note: "Paid $198.00 on 2024-12-02 per ERA 44871."</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="wt-appeal">
+      <h4>Scenario: Formal Appeal — Medical Necessity Denial</h4>
+      <div class="claim-display">
+        <div class="claim-row"><span class="claim-key">Claim ID:</span><span class="claim-val">CL-2024-00512</span></div>
+        <div class="claim-row"><span class="claim-key">Patient:</span><span class="claim-val">Martinez, Robert</span></div>
+        <div class="claim-row"><span class="claim-key">Payer:</span><span class="claim-val">UnitedHealthcare</span></div>
+        <div class="claim-row"><span class="claim-key">Billed:</span><span class="claim-val">$1,450.00</span></div>
+        <div class="claim-row"><span class="claim-key">CARC:</span><span class="claim-val highlight">CO-50</span></div>
+        <div class="claim-row"><span class="claim-key">⚡ Action:</span><span class="claim-val highlight">Prepare medical necessity appeal. Obtain clinical notes, diagnostic results. Submit via payer appeal portal within 120 days of denial.</span></div>
+        <div class="claim-row"><span class="claim-key">Stage:</span><span class="claim-val">ESCALATED</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Supervisor reviews escalation</div>
+            <div class="step-desc">Supervisor opens the claim. Reviews biller's notes. Confirms medical necessity appeal is appropriate. Moves back to WORKING and assigns to senior biller.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Gather clinical documentation</div>
+            <div class="step-desc">Request: encounter notes, lab/imaging results, prior authorization records, referring physician letter of medical necessity if available.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Draft and submit appeal</div>
+            <div class="step-desc">Submit via UHC's online appeal portal. Attach all clinical documentation. Include appeal letter citing UHC medical policy and clinical evidence.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Advance to APPEALED, set follow-up</div>
+            <div class="step-desc">Note full submission details. Stage → APPEALED. Set a calendar reminder to follow up in 30 days (or per UHC's stated turnaround).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="wt-medicare">
+      <h4>Scenario: Medicare CO-16 — Missing Information</h4>
+      <div class="claim-display">
+        <div class="claim-row"><span class="claim-key">Claim ID:</span><span class="claim-val">CL-2024-00389</span></div>
+        <div class="claim-row"><span class="claim-key">Payer:</span><span class="claim-val ok">Medicare</span></div>
+        <div class="claim-row"><span class="claim-key">State:</span><span class="claim-val">FL</span></div>
+        <div class="claim-row"><span class="claim-key">Part B MAC:</span><span class="claim-val ok">First Coast Service Options — Jurisdiction N</span></div>
+        <div class="claim-row"><span class="claim-key">DME MAC:</span><span class="claim-val ok">CGS Administrators — Jurisdiction C</span></div>
+        <div class="claim-row"><span class="claim-key">CARC:</span><span class="claim-val highlight">CO-16</span></div>
+        <div class="claim-row"><span class="claim-key">⚡ Action:</span><span class="claim-val highlight">Check ANSI 277 for specific missing element. Common issues: NPI mismatch, missing taxonomy code, invalid diagnosis pointer. Correct and resubmit.</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Note MAC from sidebar</div>
+            <div class="step-desc">The sidebar shows the MAC for FL is First Coast Service Options (Jurisdiction N). Have the MAC provider line number ready before calling.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Call MAC for specific reason</div>
+            <div class="step-desc">CO-16 is a catch-all — call First Coast to get the specific reason segment (often AAR) that tells you exactly what's missing.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Correct the identified element</div>
+            <div class="step-desc">In your practice management system, fix the specific field identified (e.g., add missing taxonomy code, correct referring NPI).</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Resubmit as corrected claim</div>
+            <div class="step-desc">Submit using bill type "7" (corrected claim) if applicable. Note the correction and confirmation number.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="wt-close">
+      <h4>Scenario: Timely Filing Write-Off</h4>
+      <div class="claim-display">
+        <div class="claim-row"><span class="claim-key">Claim ID:</span><span class="claim-val">CL-2023-00118</span></div>
+        <div class="claim-row"><span class="claim-key">DOS:</span><span class="claim-val error">2023-01-15 (>365 days)</span></div>
+        <div class="claim-row"><span class="claim-key">Payer:</span><span class="claim-val">Medicare</span></div>
+        <div class="claim-row"><span class="claim-key">CARC:</span><span class="claim-val error">CO-29 (Timely Filing)</span></div>
+        <div class="claim-row"><span class="claim-key">⚡ Action:</span><span class="claim-val error">Obtain proof of timely filing (clearinghouse acceptance report). If unavailable, initiate write-off process per supervisor protocol.</span></div>
+        <div class="claim-row"><span class="claim-key">Stage:</span><span class="claim-val">ESCALATED</span></div>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Attempt to locate proof of timely filing</div>
+            <div class="step-desc">Check clearinghouse reports, 277 acceptance reports, and any prior submission history. If claim was originally submitted on time but rejected, you may have grounds to appeal.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">If no proof exists — escalate for write-off</div>
+            <div class="step-desc">Bring to supervisor with full note history. Supervisor reviews and determines if any exception applies.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Supervisor approves write-off</div>
+            <div class="step-desc">Supervisor selects Close Reason: "TF — Timely Filing Expired." Advances to CLOSED. This populates the write-off tracking report.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-body">
+            <div class="step-title">Root cause documentation</div>
+            <div class="step-desc">Supervisor documents root cause (front desk didn't verify insurance at time of service, etc.) to prevent recurrence. This feeds the monthly denial analysis report.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: CARC REFERENCE
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-ref-carc">
+    <div class="page-tag">Reference</div>
+    <h2>CARC Code Reference</h2>
+    <p class="subtitle">Common denial codes with descriptions and suggested actions.</p>
+    <table>
+      <thead><tr><th>Code</th><th>Description</th><th>⚡ Suggested Action</th></tr></thead>
+      <tbody>
+        <tr><td><span class="code-pill">CO-4</span></td><td>Procedure code inconsistent with modifier</td><td>Verify modifier with provider. Resubmit with correction or supporting documentation.</td></tr>
+        <tr><td><span class="code-pill">CO-11</span></td><td>Diagnosis inconsistent with procedure</td><td>Review diagnosis codes. Correct ICD-10 to match clinical documentation. Resubmit.</td></tr>
+        <tr><td><span class="code-pill">CO-16</span></td><td>Claim lacks needed information for adjudication</td><td>Check ANSI 277 for specific missing element (NPI, taxonomy, diagnosis pointer). Correct and resubmit.</td></tr>
+        <tr><td><span class="code-pill">CO-18</span></td><td>Exact duplicate claim/service</td><td>Verify if original claim paid. If paid, close. If not, void duplicate and confirm original status.</td></tr>
+        <tr><td><span class="code-pill">CO-22</span></td><td>This care may be covered by another payer</td><td>Verify COB order. Update primary/secondary correctly. Resubmit to correct payer.</td></tr>
+        <tr><td><span class="code-pill">CO-27</span></td><td>Expenses incurred after coverage terminated</td><td>Verify patient insurance eligibility on DOS. Bill patient if not covered. Update insurance.</td></tr>
+        <tr><td><span class="code-pill">CO-29</span></td><td>Time limit for filing expired</td><td>Locate proof of timely filing from clearinghouse. Appeal with evidence or escalate for write-off.</td></tr>
+        <tr><td><span class="code-pill">CO-45</span></td><td>Charges exceed contracted fee</td><td>Informational — contractual adjustment. Post adjustment per contract rate. No action required.</td></tr>
+        <tr><td><span class="code-pill">CO-50</span></td><td>Not medically necessary per payer criteria</td><td>Prepare medical necessity appeal with clinical documentation. Submit within payer's appeal window.</td></tr>
+        <tr><td><span class="code-pill">CO-97</span></td><td>Payment included in allowance for another service</td><td>Review bundling rules. If unbundling is appropriate, add modifier -59 or XU and resubmit.</td></tr>
+        <tr><td><span class="code-pill">CO-167</span></td><td>Diagnosis not covered by payer</td><td>Verify diagnosis is covered under plan. If valid, appeal. If not covered, bill patient per ABN.</td></tr>
+        <tr><td><span class="code-pill">CO-197</span></td><td>Precertification / authorization absent</td><td>Obtain retroactive authorization if available. If denied, escalate for potential write-off or patient billing.</td></tr>
+        <tr><td><span class="code-pill">PR-1</span></td><td>Deductible</td><td>Informational. Post deductible to patient balance. Send patient statement.</td></tr>
+        <tr><td><span class="code-pill">PR-2</span></td><td>Coinsurance</td><td>Informational. Post coinsurance to patient balance. Send patient statement.</td></tr>
+        <tr><td><span class="code-pill">PR-3</span></td><td>Co-payment</td><td>Verify co-pay was collected at service. If not, post to patient balance.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: MAC REFERENCE
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-ref-mac">
+    <div class="page-tag">Reference</div>
+    <h2>Medicare MAC Reference</h2>
+    <p class="subtitle">Part B MAC assignments by state. The system looks up these values automatically from the REF-MACs sheet.</p>
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div>MAC jurisdictions are subject to change by CMS. This reference table reflects the structure of the data — always verify current assignments at cms.gov or in your REF-MACs sheet.</div>
+    </div>
+    <table>
+      <thead><tr><th>Jurisdiction</th><th>Part B MAC</th><th>States Covered</th></tr></thead>
+      <tbody>
+        <tr><td><span class="code-pill">J6</span></td><td>National Government Services (NGS)</td><td>IL, MN, WI</td></tr>
+        <tr><td><span class="code-pill">J8</span></td><td>Wisconsin Physicians Service (WPS)</td><td>IN, MI</td></tr>
+        <tr><td><span class="code-pill">JE</span></td><td>Novitas Solutions</td><td>PA, NJ, MD, DE, DC</td></tr>
+        <tr><td><span class="code-pill">JF</span></td><td>Noridian Healthcare Solutions</td><td>AK, AZ, ID, MT, ND, OR, SD, UT, WA, WY</td></tr>
+        <tr><td><span class="code-pill">JH</span></td><td>Novitas Solutions</td><td>AR, CO, LA, MS, NM, OK, TX</td></tr>
+        <tr><td><span class="code-pill">JJ</span></td><td>First Coast Service Options</td><td>AL, GA, FL, NC, SC, VA, TN</td></tr>
+        <tr><td><span class="code-pill">JK</span></td><td>WPS Government Health Administrators</td><td>KS, MO, NE</td></tr>
+        <tr><td><span class="code-pill">JL</span></td><td>NGS (National Government Services)</td><td>CT, ME, MA, NH, NY, RI, VT</td></tr>
+        <tr><td><span class="code-pill">JM</span></td><td>Palmetto GBA</td><td>NC, SC, VA, WV</td></tr>
+        <tr><td><span class="code-pill">JN</span></td><td>First Coast Service Options</td><td>FL (billing address)</td></tr>
+        <tr><td><span class="code-pill">JO</span></td><td>CGS Administrators</td><td>KY, OH</td></tr>
+        <tr><td><span class="code-pill">JP</span></td><td>Noridian Healthcare Solutions</td><td>CA, HI, NV, AS, GU, MP</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PAGE: QUIZ
+  ══════════════════════════════════════════════ -->
+  <div class="page" id="page-quiz">
+    <div class="page-tag">Knowledge Assessment</div>
+    <h2>Knowledge Quiz</h2>
+    <p class="subtitle">15 questions covering system navigation, CARC codes, MAC lookup, and workflow decisions. You need 80% to pass.</p>
+
+    <div id="quiz-home">
+      <div class="card">
+        <h3>📋 Before You Begin</h3>
+        <ul>
+          <li>15 multiple-choice questions</li>
+          <li>80% (12/15) required to pass</li>
+          <li>Questions cover all training sections</li>
+          <li>You can retake the quiz as many times as needed</li>
+        </ul>
+      </div>
+      <button class="btn btn-primary" onclick="startQuiz()" style="margin-top:8px;">Start Quiz →</button>
+    </div>
+
+    <div id="quiz-body" style="display:none;"></div>
+
+    <div id="quiz-submit" style="display:none; margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitQuiz()">Submit Quiz →</button>
+    </div>
+
+    <div id="quiz-result" style="display:none;">
+      <div id="score-display" style="text-align:center; padding: 20px 0;"></div>
+      <div id="quiz-review"></div>
+      <div style="text-align:center; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="retakeQuiz()">Retake Quiz</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+const pagesVisited = new Set(['welcome']);
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+  const navItem = document.querySelector(`[data-page="${id}"]`);
+  if (navItem) navItem.classList.add('active');
+  document.getElementById('content').scrollTo(0, 0);
+  pagesVisited.add(id);
+  updateProgress();
+}
+
+function updateProgress() {
+  const totalPages = document.querySelectorAll('.nav-item').length;
+  const pct = Math.min(100, Math.round((pagesVisited.size / totalPages) * 100));
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+// ═══════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════
+function switchTab(group, id) {
+  const panels = document.querySelectorAll(`[id^="${group}-"]`);
+  panels.forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById(group + '-' + id);
+  if (panel) panel.classList.add('active');
+
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach((t, i) => {
+    t.classList.toggle('active', t.textContent.trim().toLowerCase().replace(/ /g,'-') === id ||
+      (id === 'denial' && i === 0 && t.closest('#page-walkthrough')) ||
+      (id === 'appeal' && i === 1 && t.closest('#page-walkthrough')) ||
+      (id === 'medicare' && i === 2 && t.closest('#page-walkthrough')) ||
+      (id === 'close' && i === 3 && t.closest('#page-walkthrough'))
+    );
+  });
+  // Simpler: re-query tabs in current active page
+  const activePage = document.querySelector('.page.active');
+  if (!activePage) return;
+  const pageTabs = activePage.querySelectorAll('.tab');
+  pageTabs.forEach((t, i) => {
+    const ids = ['denial','appeal','medicare','close'];
+    t.classList.toggle('active', ids[i] === id);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// SCENARIOS
+// ═══════════════════════════════════════════════
+const scenarios = {
+  medicare: {
+    title: 'Medicare CO-4 Denial',
+    claim: [
+      ['Claim ID', 'CL-2024-00447', ''],
+      ['Patient', 'Johnson, Patricia', ''],
+      ['DOS', '2024-11-14', ''],
+      ['Payer', 'Medicare (Part B)', 'ok'],
+      ['State', 'TX', 'ok'],
+      ['Part B MAC', 'Novitas Solutions (JH)', 'ok'],
+      ['CPT', '99213-25', ''],
+      ['Billed', '$195.00', ''],
+      ['CARC', 'CO-4', 'highlight'],
+      ['CARC Desc', 'Procedure code inconsistent with modifier', ''],
+      ['⚡ Action', 'Verify modifier with provider. Resubmit with correction.', 'highlight'],
+      ['Stage', 'NEW', '']
+    ],
+    steps: [
+      {
+        q: 'You\'ve selected this claim. The CARC action says to verify the modifier. What is your FIRST step?',
+        choices: [
+          'Immediately close the claim as a write-off',
+          'Advance the stage to WORKING and add a note that you\'re reviewing',
+          'Call the patient to explain the denial',
+          'Escalate to supervisor right away'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! Always advance to WORKING first and document that you\'re reviewing the claim. This creates an audit trail and shows the claim is being actively worked.'
+      },
+      {
+        q: 'The claim is Medicare and the sidebar shows the MAC. Which MAC do you call for claim status on this TX claim?',
+        choices: [
+          'First Coast Service Options',
+          'CGS Administrators',
+          'Novitas Solutions (Jurisdiction JH)',
+          'National Government Services'
+        ],
+        correct: 2,
+        feedback: '✅ Correct! Texas falls under Novitas Solutions, Jurisdiction JH. The sidebar automatically showed this — no need to look it up manually.'
+      },
+      {
+        q: 'After reviewing with the provider, you confirm the -25 modifier was correct (significant separate E&M same day as procedure). What do you do?',
+        choices: [
+          'Write off the claim — the payer denied it so it must be wrong',
+          'Remove the modifier and resubmit',
+          'Resubmit with the modifier and attach documentation supporting the separate E&M service',
+          'Move to ESCALATED because you\'re not sure'
+        ],
+        correct: 2,
+        feedback: '✅ Correct! If the modifier was clinically appropriate, resubmit with supporting documentation (the encounter note showing the separate E&M work). Do not remove a correct modifier just because the payer denied it.'
+      },
+      {
+        q: 'You\'ve resubmitted. What stage should this claim be in now, and what must you document?',
+        choices: [
+          'RESOLVED — payment will come eventually',
+          'WORKING — it\'s still being worked',
+          'APPEALED with a note including the resubmission date, reference number, and what was corrected',
+          'CLOSED — the work is done'
+        ],
+        correct: 2,
+        feedback: '✅ Correct! Move to APPEALED and always document: date resubmitted, what was changed, and any confirmation/reference number from the clearinghouse or payer. This is your audit trail.'
+      }
+    ]
+  },
+  commercial: {
+    title: 'Commercial CO-18 Duplicate Claim',
+    claim: [
+      ['Claim ID', 'CL-2024-00512', ''],
+      ['Patient', 'Williams, Derek', ''],
+      ['Payer', 'Blue Cross Blue Shield', ''],
+      ['CPT', '90837', ''],
+      ['Billed', '$180.00', ''],
+      ['CARC', 'CO-18', 'highlight'],
+      ['CARC Desc', 'Exact duplicate claim/service', ''],
+      ['⚡ Action', 'Verify if original claim paid. If paid, close. If not, void duplicate and confirm original.', 'highlight'],
+      ['Stage', 'NEW', '']
+    ],
+    steps: [
+      {
+        q: 'CO-18 means the payer considers this a duplicate. What should you check first?',
+        choices: [
+          'Bill the patient for the full amount',
+          'Check if the original claim was already paid by looking in your PM system',
+          'Immediately resubmit the claim again',
+          'Escalate to supervisor'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! CO-18 just means the payer received this claim before. First check: has the original already been paid? If yes, no action needed except to close this duplicate entry.'
+      },
+      {
+        q: 'You find the original claim WAS paid — $130.00 was posted on 10/22. What do you do with this duplicate claim?',
+        choices: [
+          'Appeal for the difference between billed and paid',
+          'Resubmit to try to get paid twice',
+          'Mark as RESOLVED with a note explaining the original paid and this is a duplicate entry',
+          'Close with a note that the original payment was received and this duplicate row can be closed'
+        ],
+        correct: 3,
+        feedback: '✅ Correct! If the original was paid correctly, close this duplicate claim entry. Add a note: "Original Claim ID [X] paid $130.00 on 10/22. This is a duplicate row — closing." No further action needed.'
+      },
+      {
+        q: 'Alternatively, you check and find the original was REJECTED (never adjudicated). What now?',
+        choices: [
+          'Close both claims as duplicates',
+          'Void the duplicate and work the original claim',
+          'Bill the patient immediately',
+          'Escalate both claims'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! If the original was rejected (not denied, just rejected by the clearinghouse), the correct approach is to work the original claim. Void or close the duplicate row, correct any issues on the original, and resubmit.'
+      },
+      {
+        q: 'A colleague suggests you just resubmit the "duplicate" claim with a different date of service to get it paid. What do you do?',
+        choices: [
+          'Do it — the payer will never know',
+          'Refuse — submitting a claim with a false DOS is fraud',
+          'Ask the supervisor if it\'s okay',
+          'Only do it if the amount is under $100'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! Altering the date of service to circumvent a duplicate denial is claims fraud. Never alter claim data to make a denial go away. If you are ever pressured to do this, escalate to your supervisor and/or compliance officer immediately.'
+      }
+    ]
+  },
+  auth: {
+    title: 'Missing Authorization (CO-197)',
+    claim: [
+      ['Claim ID', 'CL-2024-00601', ''],
+      ['Patient', 'Chen, Lisa', ''],
+      ['Payer', 'Cigna', ''],
+      ['CPT', '27447 (Total Knee)', ''],
+      ['Billed', '$8,200.00', 'highlight'],
+      ['CARC', 'CO-197', 'highlight'],
+      ['CARC Desc', 'Precertification / authorization absent', ''],
+      ['⚡ Action', 'Obtain retroactive auth if available. If denied, escalate for potential write-off or patient billing review.', 'highlight'],
+      ['Stage', 'NEW', '']
+    ],
+    steps: [
+      {
+        q: 'This is a $8,200 surgery denied for missing authorization. Given the dollar amount, what is an appropriate first action after reviewing the CARC guidance?',
+        choices: [
+          'Close it immediately as a write-off',
+          'Advance to WORKING, then escalate to supervisor given the high dollar amount',
+          'Call the patient to pay out of pocket',
+          'Resubmit without any changes and hope it pays'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! High-dollar claims (over $500 is a common threshold, but $8,200 certainly qualifies) should be escalated even while being worked. Set it to WORKING, add a note explaining the situation, and escalate.'
+      },
+      {
+        q: 'Your supervisor says to check for retroactive authorization. You call Cigna. They say they can grant retro auth if medical records show the procedure was medically necessary. What do you do?',
+        choices: [
+          'Tell them it was medically necessary without checking',
+          'Request the medical records from the provider and submit the retro auth request with documentation',
+          'Accept the denial and write it off',
+          'Tell the patient their insurance denied the claim'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! Request the medical records from your provider/facility, then submit the retroactive authorization request with full clinical documentation. This is your best chance to save $8,200.'
+      },
+      {
+        q: 'Cigna denies the retroactive authorization. What are your remaining options?',
+        choices: [
+          'Write it off and never address it again',
+          'Review the patient\'s financial responsibility, check if an ABN was signed, and potentially bill the patient per the patient agreement',
+          'Resubmit the same claim again',
+          'Change the authorization number on the claim and resubmit'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! When payer options are exhausted, review the patient agreement and any Advance Beneficiary Notice (ABN). If the patient was informed they might be responsible, you can bill them. If not, this may be a write-off. Supervisor makes the final call.'
+      },
+      {
+        q: 'What documentation should exist in the claim notes when this case is finally closed?',
+        choices: [
+          'Just "denied by insurance"',
+          'A complete timeline: initial denial date, retro auth attempt, Cigna\'s response, escalation notes, supervisor decision, and final disposition',
+          'The patient\'s phone number',
+          'Nothing — closed claims don\'t need documentation'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! Every claim, especially high-dollar ones that result in write-offs, must have a complete documented timeline. This protects the organization in audits and demonstrates due diligence in working the claim.'
+      }
+    ]
+  },
+  timely: {
+    title: 'Timely Filing Risk',
+    claim: [
+      ['Claim ID', 'CL-2024-00098', ''],
+      ['Patient', 'Nguyen, James', ''],
+      ['DOS', '2024-02-10', ''],
+      ['Payer', 'Humana', ''],
+      ['TF Deadline', '2024-08-10 (90 days)', 'error'],
+      ['Days Until TF:', '12 days remaining', 'error'],
+      ['Stage', 'WORKING', ''],
+      ['Last Note', '2024-06-15 — "Waiting on records"', 'highlight']
+    ],
+    steps: [
+      {
+        q: 'This claim has 12 days until the timely filing deadline and the last note is from 6 weeks ago. What is the URGENCY level?',
+        choices: [
+          'Low — 12 days is plenty of time',
+          'Medium — worth looking at this week',
+          'CRITICAL — this needs to be worked today, not tomorrow',
+          'It doesn\'t matter since the claim is already in WORKING'
+        ],
+        correct: 2,
+        feedback: '✅ CRITICAL is correct. With 12 days remaining and no activity in 6 weeks, this claim is at serious risk of being lost forever. Missing the timely filing deadline means the claim cannot be billed to any payer — it\'s a 100% write-off.'
+      },
+      {
+        q: 'The records this claim was waiting on are for a medical necessity appeal. It\'s now been 6 weeks. What do you do first?',
+        choices: [
+          'Wait for the records to arrive on their own',
+          'Call the provider\'s office immediately to escalate the records request, explain the timely filing urgency',
+          'Close the claim — it\'s probably not going to work out',
+          'Ask the patient to get the records themselves'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! Call the provider\'s office NOW. Explain you have 12 days before the claim cannot be filed. Use urgency appropriately. If you need faxed records by end of week, say so clearly.'
+      },
+      {
+        q: 'It\'s day 10. The records still haven\'t arrived. The deadline is in 2 days. What do you do?',
+        choices: [
+          'Continue waiting',
+          'Escalate to supervisor immediately AND attempt to submit the claim as-is to preserve timely filing, noting the appeal documentation is forthcoming',
+          'Call the patient to explain the situation',
+          'Give up — it\'s too late anyway'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! Escalate NOW and consider submitting the claim to preserve timely filing, even if it may be denied again. A denial you can appeal is better than a claim you can never file. Always escalate when a deadline is imminent.'
+      },
+      {
+        q: 'The deadline passes and the claim is lost. When you document the close, what critical thing must be noted beyond just "timely filing expired"?',
+        choices: [
+          'Nothing additional is needed',
+          'The root cause — why was the claim not worked for 6 weeks? Who was responsible? This informs process improvement.',
+          'The patient\'s insurance card number',
+          'A complaint about the provider\'s records department'
+        ],
+        correct: 1,
+        feedback: '✅ Correct! Every timely filing write-off should include root cause analysis. Was it a new patient claim that fell through intake cracks? A records bottleneck? This information drives process improvements that prevent the next loss.'
+      }
+    ]
+  }
+};
+
+let currentScenario = null;
+let currentStep = 0;
+let scenarioScore = 0;
+let stepAnswered = false;
+
+function startScenario(key) {
+  currentScenario = scenarios[key];
+  currentStep = 0;
+  scenarioScore = 0;
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('scen-' + key).classList.add('selected');
+  document.getElementById('sim-home').style.display = 'none';
+  document.getElementById('simulator-container').style.display = 'block';
+  document.getElementById('sim-title').textContent = currentScenario.title;
+  renderSimStep();
+}
+
+function renderSimStep() {
+  stepAnswered = false;
+  const step = currentScenario.steps[currentStep];
+  const total = currentScenario.steps.length;
+
+  document.getElementById('sim-progress').textContent = `Step ${currentStep+1} of ${total}`;
+  document.getElementById('sim-next-btn').disabled = true;
+  document.getElementById('sim-next-btn').textContent = currentStep < total-1 ? 'Next Step →' : 'Finish →';
+
+  // Claim display
+  let claimHtml = '';
+  currentScenario.claim.forEach(row => {
+    claimHtml += `<div class="claim-row"><span class="claim-key">${row[0]}:</span><span class="claim-val ${row[2]}">${row[1]}</span></div>`;
+  });
+  document.getElementById('sim-claim-display').innerHTML = claimHtml;
+
+  document.getElementById('sim-question').textContent = step.q;
+
+  const letters = ['A','B','C','D'];
+  let choicesHtml = '';
+  step.choices.forEach((c, i) => {
+    choicesHtml += `<div class="sim-choice" id="sim-choice-${i}" onclick="selectSimChoice(${i})">
+      <span class="choice-letter">${letters[i]}</span>
+      <span>${c}</span>
+    </div>`;
+  });
+  document.getElementById('sim-choices').innerHTML = choicesHtml;
+
+  const fb = document.getElementById('sim-feedback');
+  fb.className = 'sim-feedback';
+  fb.textContent = '';
+}
+
+function selectSimChoice(idx) {
+  if (stepAnswered) return;
+  stepAnswered = true;
+
+  const step = currentScenario.steps[currentStep];
+  const isCorrect = idx === step.correct;
+  if (isCorrect) scenarioScore++;
+
+  document.querySelectorAll('.sim-choice').forEach((el, i) => {
+    if (i === step.correct) el.classList.add('correct');
+    else if (i === idx && !isCorrect) el.classList.add('wrong');
+  });
+
+  const fb = document.getElementById('sim-feedback');
+  fb.textContent = step.feedback;
+  fb.className = 'sim-feedback show ' + (isCorrect ? 'correct' : 'wrong');
+  if (!isCorrect) fb.textContent = '❌ Not quite. ' + step.feedback.replace('✅ Correct! ', '').replace('✅ CRITICAL is correct. ', '');
+
+  document.getElementById('sim-next-btn').disabled = false;
+}
+
+function simNext() {
+  currentStep++;
+  if (currentStep >= currentScenario.steps.length) {
+    finishScenario();
+  } else {
+    renderSimStep();
+  }
+}
+
+function finishScenario() {
+  const total = currentScenario.steps.length;
+  const pct = Math.round((scenarioScore / total) * 100);
+  document.getElementById('simulator-container').innerHTML = `
+    <div class="sim-header">
+      <div class="sim-dot green"></div>
+      <span style="margin-left:8px;">Scenario Complete</span>
+    </div>
+    <div class="sim-body" style="text-align:center; padding: 30px;">
+      <div class="score-circle ${pct >= 75 ? 'pass' : 'fail'}" style="margin:0 auto 20px;">
+        <span class="score-num">${scenarioScore}/${total}</span>
+        <span class="score-pct">${pct}%</span>
+      </div>
+      <p style="font-size:14px; margin-bottom:16px;">
+        ${pct >= 75 ? '✅ Great work! You handled this scenario well.' : '📚 Review the walkthrough for this scenario type and try again.'}
+      </p>
+      <button class="btn btn-secondary" onclick="exitScenario()">← Back to Scenarios</button>
+    </div>`;
+}
+
+function exitScenario() {
+  document.getElementById('sim-home').style.display = 'block';
+  document.getElementById('simulator-container').style.display = 'none';
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('selected'));
+  // Rebuild simulator container if needed
+  const container = document.getElementById('simulator-container');
+  container.innerHTML = `
+    <div class="sim-header">
+      <div class="sim-dot red"></div>
+      <div class="sim-dot yellow"></div>
+      <div class="sim-dot green"></div>
+      <span id="sim-title" style="margin-left:8px;">Scenario</span>
+      <span id="sim-progress" style="margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--muted);">Step 1 of 4</span>
+    </div>
+    <div class="sim-body">
+      <div class="claim-display" id="sim-claim-display"></div>
+      <div class="sim-step-area">
+        <div class="sim-question" id="sim-question"></div>
+        <div class="sim-choices" id="sim-choices"></div>
+        <div class="sim-feedback" id="sim-feedback"></div>
+      </div>
+      <div class="sim-nav">
+        <button class="btn btn-secondary" onclick="exitScenario()">← Back to Scenarios</button>
+        <button class="btn btn-primary" id="sim-next-btn" onclick="simNext()" disabled>Next Step →</button>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// QUIZ
+// ═══════════════════════════════════════════════
+const questions = [
+  { q: 'Where do you find the Claims Workflow Engine in Google Sheets?', opts: ['Tools menu', 'Extensions → Claims Workflow → Open Sidebar', 'Format menu', 'File → Add-ons'], correct: 1 },
+  { q: 'The CARC Action guidance appears in the sidebar _____.', opts: ['Before the CARC Code', 'After the Stage field', 'Between CARC Description and Stage', 'In a separate pop-up window'], correct: 2 },
+  { q: 'MAC information is displayed in the sidebar only when the Payer Type is:', opts: ['Medicaid', 'Commercial', 'Medicare', 'Self-Pay'], correct: 2 },
+  { q: 'What does CARC stand for?', opts: ['Claim Adjustment Reason Code', 'Claims Audit Review Center', 'Current Applicable Rate Code', 'Carrier Adjudication Reference Code'], correct: 0 },
+  { q: 'CARC CO-18 means:', opts: ['Medical necessity denied', 'Exact duplicate claim', 'Missing information', 'Timely filing expired'], correct: 1 },
+  { q: 'Which stage requires supervisor approval before a claim can be moved to it?', opts: ['WORKING', 'ESCALATED', 'APPEALED', 'CLOSED'], correct: 3 },
+  { q: 'A biller should escalate a claim when:', opts: ['Any claim is denied', 'A $600 claim has been denied twice and they cannot resolve it', 'The patient calls the office', 'The claim is over 5 days old'], correct: 1 },
+  { q: 'What should you ALWAYS do before advancing a claim\'s stage?', opts: ['Call the patient', 'Add a note documenting what action was taken', 'Get supervisor approval', 'Print the claim'], correct: 1 },
+  { q: 'CARC CO-29 means the claim was denied for:', opts: ['Missing authorization', 'Duplicate submission', 'Timely filing deadline expired', 'Wrong diagnosis code'], correct: 2 },
+  { q: 'When a Medicare claim in Florida loads, which MAC should appear in the sidebar?', opts: ['CGS Administrators', 'First Coast Service Options', 'Novitas Solutions', 'WPS Government Health'], correct: 1 },
+  { q: 'To correct a CO-16 denial, you should first:', opts: ['Resubmit immediately without changes', 'Bill the patient', 'Check the ANSI 277 for the specific missing element', 'Escalate to supervisor'], correct: 2 },
+  { q: 'A colleague suggests changing a claim\'s date of service to avoid a duplicate denial. You should:', opts: ['Do it if the amount is small', 'Refuse — this is claims fraud', 'Ask the supervisor first, then do it', 'Only do it once'], correct: 1 },
+  { q: 'How many days does Medicare typically allow for timely filing?', opts: ['90 days', '180 days', '1 year', '2 years'], correct: 2 },
+  { q: 'The REF-CARC sheet Column E contains:', opts: ['CARC code numbers', 'Denial descriptions', 'Suggested actions for each CARC code', 'Payer contact information'], correct: 2 },
+  { q: 'When a timely filing deadline is 12 days away and a claim hasn\'t been touched in 6 weeks, the correct urgency level is:', opts: ['Low — 12 days is plenty', 'Medium — work it this week', 'CRITICAL — work it today', 'Normal — just assign to someone'], correct: 2 }
+];
+
+let userAnswers = {};
+
+function startQuiz() {
+  document.getElementById('quiz-home').style.display = 'none';
+  document.getElementById('quiz-result').style.display = 'none';
+  userAnswers = {};
+
+  let html = '';
+  questions.forEach((q, qi) => {
+    html += `<div class="quiz-q" id="qq-${qi}">
+      <div class="q-num">QUESTION ${qi+1} OF ${questions.length}</div>
+      <div class="q-text">${q.q}</div>`;
+    q.opts.forEach((opt, oi) => {
+      html += `<div class="quiz-option" id="qopt-${qi}-${oi}" onclick="selectAnswer(${qi},${oi})">
+        <div class="q-radio"></div>
+        <span>${opt}</span>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  document.getElementById('quiz-body').innerHTML = html;
+  document.getElementById('quiz-body').style.display = 'block';
+  document.getElementById('quiz-submit').style.display = 'block';
+}
+
+function selectAnswer(qi, oi) {
+  // Clear other selections for this question
+  questions[qi].opts.forEach((_, i) => {
+    document.getElementById(`qopt-${qi}-${i}`).classList.remove('selected');
+  });
+  document.getElementById(`qopt-${qi}-${oi}`).classList.add('selected');
+  userAnswers[qi] = oi;
+}
+
+function submitQuiz() {
+  const answered = Object.keys(userAnswers).length;
+  if (answered < questions.length) {
+    if (!confirm(`You've answered ${answered} of ${questions.length} questions. Submit anyway?`)) return;
+  }
+
+  let score = 0;
+  questions.forEach((q, qi) => {
+    const userAns = userAnswers[qi];
+    const correctEl = document.getElementById(`qopt-${qi}-${q.correct}`);
+    if (correctEl) correctEl.classList.add('correct');
+    if (userAns !== undefined && userAns !== q.correct) {
+      document.getElementById(`qopt-${qi}-${userAns}`).classList.add('wrong');
+    }
+    if (userAns === q.correct) score++;
+    // Disable clicks
+    q.opts.forEach((_, i) => {
+      const el = document.getElementById(`qopt-${qi}-${i}`);
+      if (el) el.style.cursor = 'default';
+    });
+  });
+
+  const pct = Math.round((score / questions.length) * 100);
+  const passed = pct >= 80;
+
+  document.getElementById('quiz-submit').style.display = 'none';
+
+  document.getElementById('score-display').innerHTML = `
+    <div class="score-circle ${passed ? 'pass' : 'fail'}">
+      <span class="score-num">${score}/${questions.length}</span>
+      <span class="score-pct">${pct}%</span>
+    </div>
+    <h3 style="margin-bottom:8px;">${passed ? '🎓 Congratulations — You Passed!' : '📚 Keep Studying'}</h3>
+    <p style="color:var(--muted);">${passed ? 'You\'ve demonstrated solid knowledge of the Claims Workflow Engine V2.0.' : 'You need 80% (12/15) to pass. Review the sections below where you made errors and retake.'}</p>
+  `;
+
+  document.getElementById('quiz-result').style.display = 'block';
+  document.getElementById('content').scrollTo(0,0);
+}
+
+function retakeQuiz() {
+  document.getElementById('quiz-body').style.display = 'none';
+  document.getElementById('quiz-result').style.display = 'none';
+  document.getElementById('quiz-home').style.display = 'block';
+}
+</script>
+</body>
+</html>

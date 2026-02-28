@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      padding: 16px;
+      background: #f8f9fa;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .header {
+      background: linear-gradient(135deg, <?= typeColor ?>15, <?= typeColor ?>05);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 14px;
+      border-left: 4px solid <?= typeColor ?>;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .issue-id {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #1f2937;
+    }
+    .issue-meta { font-size: 12px; color: #6b7280; line-height: 1.7; }
+    .issue-meta strong { color: #374151; font-weight: 600; }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: <?= typeColor ?>22;
+      color: <?= typeColor ?>;
+      margin: 6px 0;
+      letter-spacing: 0.3px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .workflow-option {
+      background: #f9fafb;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .workflow-option:hover {
+      border-color: <?= typeColor ?>;
+      background: <?= typeColor ?>08;
+      transform: translateX(2px);
+    }
+    .option-label { font-weight: 600; color: #1f2937; font-size: 13px; }
+    .option-desc { font-size: 11px; color: #6b7280; margin-top: 3px; }
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, <?= typeColor ?>, <?= typeColor ?>dd);
+      color: white;
+      box-shadow: 0 2px 8px <?= typeColor ?>40;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px <?= typeColor ?>50; }
+    .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+    .btn-secondary:hover { background: #e5e7eb; }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e5e7eb;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 12px;
+      resize: vertical;
+      min-height: 70px;
+    }
+    textarea:focus { outline: none; border-color: <?= typeColor ?>; }
+    .alert { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; }
+    .info  { background: #dbeafe; border-left: 3px solid #3b82f6; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; }
+    .success { background: #d1fae5; border-left: 3px solid #10b981; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; }
+    .nav-bar {
+      background: white;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-bar select {
+      flex: 1;
+      padding: 8px 10px;
+      border: 2px solid #e5e7eb;
+      border-radius: 7px;
+      font-size: 12px;
+      font-family: inherit;
+    }
+    .nav-bar select:focus { outline: none; border-color: <?= typeColor ?>; }
+    .nav-btn {
+      padding: 8px 12px;
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { background: #e5e7eb; }
+    .progress-bar { display: flex; align-items: center; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+    .progress-step { display: flex; flex-direction: column; align-items: center; min-width: 60px; position: relative; }
+    .progress-step .dot {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: #e5e7eb; border: 2px solid #d1d5db;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #9ca3af; z-index: 1;
+    }
+    .progress-step.completed .dot { background: #10b981; border-color: #10b981; color: white; }
+    .progress-step.current .dot { background: #667eea; border-color: #667eea; color: white; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
+    .progress-step .step-label { font-size: 9px; color: #9ca3af; text-align: center; margin-top: 4px; max-width: 60px; line-height: 1.3; }
+    .progress-step.completed .step-label { color: #10b981; }
+    .progress-step.current .step-label { color: #667eea; font-weight: 700; }
+    .progress-connector { flex: 1; height: 2px; background: #e5e7eb; margin-bottom: 18px; min-width: 12px; }
+    .progress-connector.completed { background: #10b981; }
+  </style>
+</head>
+<body>
+
+  <!-- Claim Navigation Bar -->
+  <div class="nav-bar">
+    <select id="claimNav" onchange="switchClaim()">
+      <?!=claimOptions ?>
+    </select>
+    <button class="nav-btn" onclick="switchClaim()">Go →</button>
+  </div>
+
+  <!-- Claim Header -->
+  <div class="header">
+    <div class="issue-id">
+      <span><?= typeIcon ?></span>
+      <span><?= issue.issueId ?></span>
+    </div>
+    <div class="issue-meta">
+      <strong>Type:</strong> <span class="status-badge"><?= issue.issueType ?></span><br>
+      <strong>Practice:</strong> <?= issue.practice ?><br>
+      <? if (issue.provider) { ?><strong>Provider:</strong> <?= issue.provider ?><br><? } ?>
+      <? if (issue.payerName) { ?><strong>Payer:</strong> <?= issue.payerName ?><br><? } ?>
+      <? if (issue.accountNumber) { ?><strong>Account:</strong> <?= issue.accountNumber ?><br><? } ?>
+      <? if (issue.dos) { ?><strong>DOS:</strong> <?= issue.dos ?><br><? } ?>
+      <? if (issue.cpt) { ?><strong>CPT:</strong> <?= issue.cpt ?><br><? } ?>
+      <? if (issue.denialCategory) { ?><strong>Reason:</strong> <?= issue.denialCategory ?><br><? } ?>
+      <? if (issue.carcCode) { ?><strong>CARC:</strong> <?= (issue.carcGroupCode ? issue.carcGroupCode + '-' : '') + issue.carcCode ?><br><? } ?>
+      <? if (issue.carcDescription) { ?><strong>CARC Desc:</strong> <?= issue.carcDescription ?><br><? } ?>
+      <? if (issue.carcAction) { ?>
+      <div style="background:#fff3e0; border-left:3px solid #ff9800; padding:8px 10px; margin:6px 0; border-radius:4px; font-size:11.5px; color:#5d4037;">
+        <strong style="color:#e65100;">⚡ Action:</strong> <?= issue.carcAction ?>
+      </div>
+      <? } ?>
+      <? if (issue.denialDescription) { ?><strong>Details:</strong> <?= issue.denialDescription ?><br><? } ?>
+      <br>
+      <strong>Stage:</strong> <?= issue.workflowStage ?><br>
+      <strong>Priority:</strong> <?= issue.priority ?><br>
+      <strong>Assigned:</strong> <?= issue.assignedTo || 'Unassigned' ?><br>
+      <strong>Days Open:</strong> <?= issue.daysOpen ?>
+      <? if (issue.variance) { ?><br><strong>Variance:</strong> $<?= Math.abs(issue.variance).toFixed(2) ?><? } ?>
+    </div>
+    <?!= payerInfo ?>
+    <?!= macInfo ?>
+  </div>
+
+  <!-- Workflow Decision Tree (built server-side) -->
+  <?!= workflowHTML ?>
+
+  <!-- Edit Claim Card -->
+  <div class="card">
+    <div class="section-title">✏️ Edit Claim</div>
+    <button class="btn btn-secondary" onclick="editClaim()">✏️ Edit Claim Details</button>
+  </div>
+
+  <!-- Log Activity Card — FIXED: was missing opening div.card tag in original -->
+  <div class="card">
+    <div class="section-title">📝 Log Activity</div>
+    <textarea id="activityNote" placeholder="Log what you did, findings, next steps..."></textarea>
+    <button class="btn btn-primary" onclick="logActivity()">💾 Save Activity</button>
+  </div>
+
+  <!-- Quick Actions Card -->
+  <div class="card">
+    <div class="section-title">⚡ Quick Actions</div>
+
+    <label style="font-size:11px; font-weight:600; color:#6b7280; margin-bottom:4px; display:block;">Reassign To:</label>
+    <select id="reassignSelect">
+      <option value="">Select person...</option>
+      <?= userOptions ?>
+      <option value="__other__">Other (type name)</option>
+    </select>
+    <input type="text" id="reassignOther" placeholder="Enter name..." style="display:none; margin-top:6px; width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:7px; font-size:12px;">
+    <button class="btn btn-secondary" onclick="doReassign()">👤 Reassign</button>
+
+    <label style="font-size:11px; font-weight:600; color:#6b7280; margin:12px 0 4px 0; display:block;">Change Priority:</label>
+    <select id="prioritySelect">
+      <option value="">Select priority...</option>
+      <option>High (Urgent)</option>
+      <option>Medium</option>
+      <option>Low</option>
+      <option>Critical (Past Due)</option>
+      <option>High - Trend Alert</option>
+      <option value="__other__">Other (type custom)</option>
+    </select>
+    <input type="text" id="priorityOther" placeholder="Enter priority..." style="display:none; margin-top:6px; width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:7px; font-size:12px;">
+    <button class="btn btn-secondary" onclick="doChangePriority()">⚠️ Change Priority</button>
+
+    <label style="font-size:11px; font-weight:600; color:#6b7280; margin:12px 0 4px 0; display:block;">Change Root Cause:</label>
+    <select id="rootCauseSelect">
+      <option value="">Select root cause...</option>
+      <option>Administrative/Front End</option>
+      <option>Coding/Billing</option>
+      <option>Clinical/Documentation</option>
+      <option>Payer Issue/System Error</option>
+      <option>Patient Responsibility</option>
+      <option>Credentialing/Contracting</option>
+      <option>Research & Investigation</option>
+      <option value="__other__">Other (type custom)</option>
+    </select>
+    <input type="text" id="rootCauseOther" placeholder="Enter root cause..." style="display:none; margin-top:6px; width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:7px; font-size:12px;">
+    <button class="btn btn-secondary" onclick="doChangeRootCause()">🔄 Change Root Cause</button>
+  </div>
+
+  <script>
+    var issueRow = <?= row ?>;
+
+    function editClaim() {
+      google.script.run.withSuccessHandler(function() {}).showEditIssueForm(issueRow);
+    }
+
+    function switchClaim() {
+      var targetRow = parseInt(document.getElementById('claimNav').value);
+      if (!targetRow) return;
+      google.script.run.withSuccessHandler(function() {}).openWorkflowSidebarByRow(targetRow);
+    }
+
+    function logActivity() {
+      var note = document.getElementById('activityNote').value.trim();
+      if (!note) { alert('Please enter a note'); return; }
+      google.script.run
+        .withSuccessHandler(function() {
+          document.getElementById('activityNote').value = '';
+          alert('✅ Activity logged!');
+        })
+        .logActivityFromSidebar('<?= issue.issueId ?>', note);
+    }
+
+    document.getElementById('reassignSelect').addEventListener('change', function() {
+      document.getElementById('reassignOther').style.display = this.value === '__other__' ? 'block' : 'none';
+    });
+    document.getElementById('prioritySelect').addEventListener('change', function() {
+      document.getElementById('priorityOther').style.display = this.value === '__other__' ? 'block' : 'none';
+    });
+    document.getElementById('rootCauseSelect').addEventListener('change', function() {
+      document.getElementById('rootCauseOther').style.display = this.value === '__other__' ? 'block' : 'none';
+    });
+
+    function doReassign() {
+      var person = document.getElementById('reassignSelect').value;
+      if (person === '__other__') person = document.getElementById('reassignOther').value.trim();
+      if (!person) { alert('Please select or enter a person'); return; }
+      google.script.run
+        .withSuccessHandler(function() { alert('✅ Reassigned to ' + person); google.script.run.openWorkflowSidebar(); })
+        .updateIssueField(issueRow, 'assignedTo', person);
+    }
+
+    function doChangePriority() {
+      var priority = document.getElementById('prioritySelect').value;
+      if (priority === '__other__') priority = document.getElementById('priorityOther').value.trim();
+      if (!priority) { alert('Please select or enter a priority'); return; }
+      google.script.run
+        .withSuccessHandler(function() { alert('✅ Priority changed to ' + priority); google.script.run.openWorkflowSidebar(); })
+        .updateIssueField(issueRow, 'priority', priority);
+    }
+
+    function doChangeRootCause() {
+      var cause = document.getElementById('rootCauseSelect').value;
+      if (cause === '__other__') cause = document.getElementById('rootCauseOther').value.trim();
+      if (!cause) { alert('Please select or enter a root cause'); return; }
+      google.script.run
+        .withSuccessHandler(function() { alert('✅ Root cause changed to ' + cause); google.script.run.openWorkflowSidebar(); })
+        .updateIssueField(issueRow, 'rootCause', cause);
+    }
+
+    function moveToStage(stage) {
+      google.script.run
+        .withSuccessHandler(function() { alert('✅ Stage updated!'); google.script.run.openWorkflowSidebar(); })
+        .updateIssueField(issueRow, 'workflowStage', stage);
+    }
+
+    function markResolved() {
+      if (confirm('Mark this issue as resolved?')) {
+        google.script.run
+          .withSuccessHandler(function() { alert('✅ Issue resolved!'); google.script.host.close(); })
+          .resolveIssue(issueRow);
+      }
+    }
+
+    function showResearchSource(type) {
+      ['portal','ai','internet','phone'].forEach(function(t) {
+        document.getElementById(t + 'Form').style.display = 'none';
+      });
+      document.getElementById(type + 'Form').style.display = 'block';
+      document.getElementById('researchSourceForm').style.display = 'block';
+    }
+
+    function saveResearch(type) {
+      var note = '';
+      if (type === 'portal') {
+        var url = document.getElementById('portalUrl').value.trim();
+        var date = document.getElementById('portalDate').value;
+        var findings = document.getElementById('portalFindings').value.trim();
+        if (!url || !findings) { alert('Please enter URL and findings'); return; }
+        note = '🌐 PORTAL RESEARCH | URL: ' + url + ' | Date: ' + date + ' | Findings: ' + findings;
+      } else if (type === 'ai') {
+        var tool = document.getElementById('aiTool').value;
+        var question = document.getElementById('aiQuestion').value.trim();
+        var findings = document.getElementById('aiFindings').value.trim();
+        if (!tool || !question || !findings) { alert('Please complete all fields'); return; }
+        note = '🤖 AI RESEARCH | Tool: ' + tool + ' | Question: ' + question + ' | Findings: ' + findings;
+      } else if (type === 'internet') {
+        var params = document.getElementById('searchParams').value.trim();
+        var sources = document.getElementById('internetSources').value.trim();
+        var findings = document.getElementById('internetFindings').value.trim();
+        if (!params || !findings) { alert('Please enter search parameters and findings'); return; }
+        note = '🔎 INTERNET RESEARCH | Search: ' + params + ' | Sources: ' + sources + ' | Findings: ' + findings;
+      } else if (type === 'phone') {
+        var phone = document.getElementById('phoneNumber').value.trim();
+        var rep = document.getElementById('phoneRep').value.trim();
+        var ref = document.getElementById('phoneRef').value.trim();
+        var findings = document.getElementById('phoneFindings').value.trim();
+        if (!phone || !findings) { alert('Please enter phone number and findings'); return; }
+        note = '📞 PHONE RESEARCH | Number: ' + phone + ' | Rep: ' + rep + ' | Ref#: ' + ref + ' | Findings: ' + findings;
+      }
+      google.script.run
+        .withSuccessHandler(function() {
+          alert('✅ Research saved!');
+          document.getElementById('researchSourceForm').style.display = 'none';
+          google.script.run.openWorkflowSidebarByRow(issueRow);
+        })
+        .logResearchAndAdvance('<?= issue.issueId ?>', issueRow, note);
+    }
+
+    function doChangeRootCauseAndReload(rootCause) {
+      google.script.run
+        .withSuccessHandler(function() { google.script.run.openWorkflowSidebarByRow(issueRow); })
+        .updateIssueField(issueRow, 'rootCause', rootCause);
+    }
+  </script>
+</body>
+</html>
