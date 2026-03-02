@@ -136,6 +136,17 @@
       border-top-color: #1e293b;
     }
     .tooltip-wrapper:hover .tooltip { visibility: visible; opacity: 1; }
+    /* PTID related accounts reveal */
+    #relatedAccountsGroup {
+      display: none;
+      background: #f0f4ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 8px;
+    }
+    #relatedAccountsGroup.visible { display: block; }
+    #relatedAccountsGroup label { color: #4338ca; }
   </style>
 </head>
 <body>
@@ -192,6 +203,20 @@
       <div class="form-group" id="accountNumberField">
         <label>Account Number</label>
         <input type="text" id="accountNumberInput" placeholder="e.g., Copy and Paste ID">
+
+        <!-- PTID block — always shown alongside Account Number -->
+        <div style="margin-top:12px;">
+          <label>PTID <span style="font-weight:400;color:#888;">(Patient ID from PM)</span></label>
+          <input type="text" id="ptidInput" placeholder="Enter PTID if this patient has multiple related claims" oninput="toggleRelatedAccounts()">
+          <div class="help-text">Optional. Enter PTID if other claims for this patient have the same denial reason.</div>
+        </div>
+
+        <!-- Related accounts — reveals when PTID is entered -->
+        <div id="relatedAccountsGroup">
+          <label>📎 Related Account Numbers</label>
+          <textarea id="relatedAccountsInput" rows="3" placeholder="Enter additional account numbers, one per line or comma-separated&#10;e.g., 12345, 67890, 11111&#10;&#10;Once this claim resolves, the system will prompt you to apply the same steps to these accounts."></textarea>
+          <div class="help-text">These accounts won't be logged separately — they'll appear as a follow-up reminder when this claim is resolved.</div>
+        </div>
       </div>
 
       <div class="form-group" id="payerFields">
@@ -330,6 +355,12 @@
       if (document.readyState === 'complete') { setTimeout(prefillForm, 500); }
     }
 
+    function toggleRelatedAccounts() {
+      var ptid = document.getElementById('ptidInput').value.trim();
+      var group = document.getElementById('relatedAccountsGroup');
+      group.classList.toggle('visible', ptid.length > 0);
+    }
+
     function prefillForm() {
       document.querySelectorAll('.issue-type-btn').forEach(function(btn) {
         if (btn.innerText.trim().indexOf(existing.issueType) !== -1) { btn.click(); }
@@ -351,6 +382,11 @@
         if (existing.paidAmount)        document.getElementById('paidAmount').value = existing.paidAmount;
         if (existing.assignedTo)        document.getElementById('assignedTo').value = existing.assignedTo;
         if (existing.coverageLevel)     document.getElementById('coverageLevel').value = existing.coverageLevel;
+        if (existing.ptid) {
+          document.getElementById('ptidInput').value = existing.ptid;
+          toggleRelatedAccounts();
+        }
+        if (existing.relatedAccounts)   document.getElementById('relatedAccountsInput').value = existing.relatedAccounts;
         if (existing.carcCode) {
           carcSelection = { code: existing.carcCode, description: existing.carcDescription || '', groupCode: existing.carcGroupCode || '' };
           document.getElementById('carcCode').value = existing.carcCode;
@@ -511,9 +547,9 @@
     }
 
     function selectCode(type, code, description, groupCode, denialCategory) {
-      var inputId = type === 'CARC' ? 'carcCode' : 'rarcCode';
-      var resultsId = type === 'CARC' ? 'carcResults' : 'rarcResults';
-      var selectedId = type === 'CARC' ? 'carcSelected' : 'rarcSelected';
+      var inputId    = type === 'CARC' ? 'carcCode'    : 'rarcCode';
+      var resultsId  = type === 'CARC' ? 'carcResults' : 'rarcResults';
+      var selectedId = type === 'CARC' ? 'carcSelected': 'rarcSelected';
       document.getElementById(inputId).value = code;
       document.getElementById(resultsId).style.display = 'none';
       var label = type === 'CARC' ? '✓ [' + groupCode + '] ' + code + ' - ' + description : '✓ ' + code + ' - ' + description;
@@ -555,6 +591,13 @@
       }).getGlobalPeriodForCPT(cpt);
     }
 
+    function getRelatedAccounts() {
+      var raw = document.getElementById('relatedAccountsInput').value.trim();
+      if (!raw) return '';
+      // Normalize: replace newlines with commas, collapse spaces, strip trailing commas
+      return raw.replace(/\n/g, ',').replace(/,\s*/g, ',').replace(/,+/g, ',').replace(/^,|,$/g, '').trim();
+    }
+
     function submitIssue() {
       if (!selectedType) { alert('Please select an issue type'); return; }
       var practiceSelect = document.getElementById('practice');
@@ -569,7 +612,9 @@
         providerNPI:  providerSelect.value,
         priority:     'Auto',
         assignedTo:   document.getElementById('assignedTo').value,
-        notes:        document.getElementById('notes').value
+        notes:        document.getElementById('notes').value,
+        ptid:         document.getElementById('ptidInput').value.trim(),
+        relatedAccounts: getRelatedAccounts()
       };
       if (selectedType !== 'Internal') {
         issue.payerName      = document.getElementById('payer').value;
@@ -623,28 +668,30 @@
       var practiceSelect = document.getElementById('practice');
       var providerSelect = document.getElementById('provider');
       var issue = {
-        issueType:    selectedType,
-        practice:     practiceSelect.options[practiceSelect.selectedIndex].text,
-        practiceNPI:  selectedPractice ? selectedPractice.npi : '',
-        state:        selectedPractice ? selectedPractice.state : '',
-        provider:     providerSelect.options[providerSelect.selectedIndex].text,
-        providerNPI:  providerSelect.value,
-        assignedTo:   document.getElementById('assignedTo').value,
-        payerName:    document.getElementById('payer').value || existing.payerName,
-        coverageType: document.getElementById('coverageType').value || existing.coverageType,
-        coverageLevel: document.getElementById('coverageLevel').value || existing.coverageLevel,
-        cpt:          document.getElementById('cpt').value,
-        dos:          document.getElementById('dos').value,
-        accountNumber: document.getElementById('accountNumberInput').value,
+        issueType:       selectedType,
+        practice:        practiceSelect.options[practiceSelect.selectedIndex].text,
+        practiceNPI:     selectedPractice ? selectedPractice.npi : '',
+        state:           selectedPractice ? selectedPractice.state : '',
+        provider:        providerSelect.options[providerSelect.selectedIndex].text,
+        providerNPI:     providerSelect.value,
+        assignedTo:      document.getElementById('assignedTo').value,
+        payerName:       document.getElementById('payer').value || existing.payerName,
+        coverageType:    document.getElementById('coverageType').value || existing.coverageType,
+        coverageLevel:   document.getElementById('coverageLevel').value || existing.coverageLevel,
+        cpt:             document.getElementById('cpt').value,
+        dos:             document.getElementById('dos').value,
+        accountNumber:   document.getElementById('accountNumberInput').value,
         denialRejectionDate: document.getElementById('denialRejectionDate').value,
-        denialCategory: document.getElementById('denialCategory').value || document.getElementById('rejectionCategory').value,
-        denialCode:     carcSelection ? carcSelection.code : document.getElementById('carcCode').value,
+        denialCategory:  document.getElementById('denialCategory').value || document.getElementById('rejectionCategory').value,
+        denialCode:      carcSelection ? carcSelection.code : document.getElementById('carcCode').value,
         denialCodeGroup: carcSelection ? carcSelection.groupCode : existing.carcGroupCode,
         denialCodeDesc:  carcSelection ? carcSelection.description : existing.carcDescription,
         rarcCode:        rarcSelection ? rarcSelection.code : document.getElementById('rarcCode').value,
         rarcCodeDesc:    rarcSelection ? rarcSelection.description : existing.rarcDescription,
         expectedAmount:  parseFloat(document.getElementById('expectedAmount').value) || 0,
-        paidAmount:      parseFloat(document.getElementById('paidAmount').value) || 0
+        paidAmount:      parseFloat(document.getElementById('paidAmount').value) || 0,
+        ptid:            document.getElementById('ptidInput').value.trim(),
+        relatedAccounts: getRelatedAccounts()
       };
       google.script.run
         .withSuccessHandler(function() {

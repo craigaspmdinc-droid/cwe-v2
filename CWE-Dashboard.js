@@ -6,9 +6,8 @@
  * ╚═══════════════════════════════════════════════════════════════════════╝
  */
 
-// ── Open stages (claims that count toward metrics) ───────────────────
 var DASH_OPEN_STAGES = ['NEW', 'WORKING', 'ESCALATED', 'APPEALED', 'PENDING', 'PENDING INFO', 'IN PROGRESS', 'CONTRACT PULLED', 'CONTRACT_PULLED'];
-var DASH_QUEUE_MAX   = 15;
+var DASH_QUEUE_MAX   = 50; // Raised — supervisor needs to see all team members' queues
 
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -22,11 +21,9 @@ function openDashboardSidebar() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
+
 // ═══════════════════════════════════════════════════════════════════════
 // getWorkflowData(row)
-// Called from CWE-App.html when user clicks a claim in the queue.
-// Bundles issue data + all server-side HTML builders into one payload.
-// NOTE: Does NOT switch the active sheet — sidebar stays on app view.
 // ═══════════════════════════════════════════════════════════════════════
 function getWorkflowData(row) {
   var errors = [];
@@ -34,9 +31,6 @@ function getWorkflowData(row) {
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Claims');
   if (!sheet) return { error: 'Claims sheet not found.' };
-
-  // ── REMOVED: ss.setActiveSheet(sheet) and sheet.setActiveRange()
-  // Those lines were switching the user away from the app view sheet.
 
   var user, issueData, typeColor;
   try { user      = getCurrentUser();   } catch(e) { return { error: 'Could not get user: ' + e.message }; }
@@ -76,7 +70,10 @@ function getWorkflowData(row) {
   };
 }
 
-// ── Dark-theme payer intel card ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════════
+// buildPayerInfoDark / buildMACInfoDark / buildWorkflowHTMLDark
+// ═══════════════════════════════════════════════════════════════════════
 function buildPayerInfoDark(issue) {
   if (!issue.state || !issue.payerName) return '';
   var payers = getPayersByState(issue.state);
@@ -110,12 +107,11 @@ function buildPayerInfoDark(issue) {
   return '<div class="intel-card">' +
     '<div class="intel-title">📊 Payer Intelligence</div>' +
     '<div class="intel-row"><span class="intel-key">Timely Filing</span><span>' + (payer.timelyFiling||'?') + ' days'+timelyHtml+'</span></div>' +
-    '<div class="intel-row"><span class="intel-key">Level 1 Appeal</span><span>' + (payer.level1Name||'—') + ' ('+( payer.level1Days||'?')+' days)'+appealHtml+'</span></div>' +
+    '<div class="intel-row"><span class="intel-key">Level 1 Appeal</span><span>' + (payer.level1Name||'—') + ' ('+(payer.level1Days||'?')+' days)'+appealHtml+'</span></div>' +
     '<div class="intel-row"><span class="intel-key">Level 2 Appeal</span><span>' + (payer.level2Name||'—') + ' ('+(payer.level2Days||'?')+' days)</span></div>' +
     '</div>';
 }
 
-// ── Dark-theme MAC card ──────────────────────────────────────────────
 function buildMACInfoDark(issue) {
   if (!issue.state || !issue.payerName) return '';
   if (issue.payerName.toLowerCase().indexOf('medicare') === -1) return '';
@@ -134,7 +130,6 @@ function buildMACInfoDark(issue) {
     }).join('') + '</div>';
 }
 
-// ── Dark-theme workflow decision tree ────────────────────────────────
 function buildWorkflowHTMLDark(issue, color) {
   var raw = buildRootCauseWorkflow(issue, color);
   return raw
@@ -158,6 +153,10 @@ function buildWorkflowHTMLDark(issue, color) {
 
 // ═══════════════════════════════════════════════════════════════════════
 // getDashboardData()
+// Now returns:
+//   myQueue    — claims assigned to the current user (for non-admin default)
+//   allQueue   — ALL visible open claims (for admin "Viewing as" filter)
+//   teamMembers — sorted name list (for supervisor dropdown, admin only)
 // ═══════════════════════════════════════════════════════════════════════
 function getDashboardData() {
   try {
@@ -182,6 +181,7 @@ function getDashboardData() {
     var byStageCounts    = {};
     var byPriorityCounts = {};
     var myQueue          = [];
+    var allQueue         = []; // all visible open claims (for supervisor view)
 
     data.forEach(function(row, idx) {
       var stage    = String(row[COL.WORKFLOW_STAGE] || '').trim().toUpperCase();
@@ -200,41 +200,54 @@ function getDashboardData() {
       if (stage === 'ESCALATED') escalatedCount++;
 
       var stageRaw = String(row[COL.WORKFLOW_STAGE] || '').trim();
-      if (stageRaw) {
-        byStageCounts[stageRaw] = (byStageCounts[stageRaw] || 0) + 1;
+      if (stageRaw) byStageCounts[stageRaw] = (byStageCounts[stageRaw] || 0) + 1;
+      if (priority) byPriorityCounts[priority] = (byPriorityCounts[priority] || 0) + 1;
+
+      var agingDays = null;
+      var dateVal   = row[COL.DATE_LOGGED];
+      if (dateVal instanceof Date && !isNaN(dateVal)) {
+        agingDays = Math.floor((today - dateVal) / (1000 * 60 * 60 * 24));
       }
 
-      if (priority) {
-        byPriorityCounts[priority] = (byPriorityCounts[priority] || 0) + 1;
-      }
+      var queueItem = {
+        row:        idx + 2,
+        claimId:    String(row[COL.ISSUE_ID]       || '').trim(),
+        stage:      String(row[COL.WORKFLOW_STAGE]  || '').trim(),
+        priority:   String(row[COL.PRIORITY]        || '').trim(),
+        payer:      String(row[COL.PAYER]            || '').trim(),
+        practice:   String(row[COL.PRACTICE]         || '').trim(),
+        assignedTo: String(row[COL.ASSIGNED_TO]      || '').trim(),
+        amount:     variance || null,
+        agingDays:  agingDays
+      };
 
+      // allQueue: all visible claims (used by supervisor "Viewing as")
+      allQueue.push(queueItem);
+
+      // myQueue: only claims assigned to current user
       var isMe = (assignee.toLowerCase() === user.name.toLowerCase());
       if (isMe && myQueue.length < DASH_QUEUE_MAX) {
-        var agingDays = null;
-        var dateVal   = row[COL.DATE_LOGGED];
-        if (dateVal instanceof Date && !isNaN(dateVal)) {
-          agingDays = Math.floor((today - dateVal) / (1000 * 60 * 60 * 24));
-        }
-        myQueue.push({
-          row:       idx + 2,
-          claimId:   String(row[COL.ISSUE_ID]       || '').trim(),
-          stage:     String(row[COL.WORKFLOW_STAGE]  || '').trim(),
-          priority:  String(row[COL.PRIORITY]        || '').trim(),
-          payer:     String(row[COL.PAYER]            || '').trim(),
-          practice:  String(row[COL.PRACTICE]         || '').trim(),
-          amount:    variance || null,
-          agingDays: agingDays
-        });
+        myQueue.push(queueItem);
       }
     });
 
     var priOrder = { 'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3 };
-    myQueue.sort(function(a, b) {
-      var pa = (priOrder[a.priority] != null) ? priOrder[a.priority] : 4;
-      var pb = (priOrder[b.priority] != null) ? priOrder[b.priority] : 4;
-      if (pa !== pb) return pa - pb;
-      return (b.agingDays || 0) - (a.agingDays || 0);
-    });
+    var sortQueue = function(q) {
+      return q.sort(function(a, b) {
+        var pa = (priOrder[a.priority] != null) ? priOrder[a.priority] : 4;
+        var pb = (priOrder[b.priority] != null) ? priOrder[b.priority] : 4;
+        if (pa !== pb) return pa - pb;
+        return (b.agingDays || 0) - (a.agingDays || 0);
+      });
+    };
+    sortQueue(myQueue);
+    sortQueue(allQueue);
+
+    // Team members list — only returned for Admin/Supervisor
+    var teamMembers = [];
+    if (user.level === 'Admin' || user.level === 'Supervisor') {
+      teamMembers = getTeamMemberNames();
+    }
 
     return {
       userName:          user.name,
@@ -246,7 +259,9 @@ function getDashboardData() {
       totalVariance:     totalVariance,
       byStageCounts:     byStageCounts,
       byPriorityCounts:  byPriorityCounts,
-      myQueue:           myQueue
+      myQueue:           myQueue,
+      allQueue:          allQueue,
+      teamMembers:       teamMembers
     };
 
   } catch(e) {
@@ -260,13 +275,9 @@ function getDashboardData() {
 // ACTION HANDLERS
 // ═══════════════════════════════════════════════════════════════════════
 
-function dashboardLogNewIssue() {
-  showNewIssueForm();
-}
+function dashboardLogNewIssue() { showNewIssueForm(); }
 
-function dashboardOpenSidebarForRow(row) {
-  openWorkflowSidebarByRow(row);
-}
+function dashboardOpenSidebarForRow(row) { openDashboardSidebar(); }
 
 function dashboardActivateClaimsSheet() {
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -284,6 +295,7 @@ function emptyDashboard_(user) {
   return {
     userName: user.name, userLevel: user.level, userGroup: user.group,
     totalOpen: 0, criticalHigh: 0, escalatedCount: 0, totalVariance: 0,
-    byStageCounts: {}, byPriorityCounts: {}, myQueue: []
+    byStageCounts: {}, byPriorityCounts: {},
+    myQueue: [], allQueue: [], teamMembers: []
   };
 }

@@ -34,7 +34,6 @@ function logNewIssue(issue) {
 
   var rootCause = determineRootCause(issue);
 
-  // ── Appeal Due Date + Priority Calculation ──────────────────────────
   var appealDueDays = 60;
   var timelyFilingDays = 90;
   var coverageType = (issue.coverageType || '').toLowerCase();
@@ -67,7 +66,6 @@ function logNewIssue(issue) {
     appealDueDate.setDate(appealDueDate.getDate() + appealDueDays);
   }
 
-  // Look up denial description
   var denialDescription = '';
   if (issue.denialCategory) {
     var refSheet = ss.getSheetByName('REF-Denials');
@@ -103,10 +101,10 @@ function logNewIssue(issue) {
     rootCause,                        // O  - Root Cause
     'New',                            // P  - Workflow Stage
     autoPriority,                     // Q  - Priority
-    issue.assignedTo || user.name,           // R  - Assigned To
+    issue.assignedTo || user.name,    // R  - Assigned To
     '',                               // S  - Date Resolved
     '',                               // T  - Days Open (formula below)
-    issue.denialCode || issue.rejectionReason || issue.paymentType || issue.errorType || '', // U - Issue Details
+    issue.denialCode || issue.rejectionReason || issue.paymentType || issue.errorType || '', // U
     issue.batchId || '',              // V  - Batch ID
     issue.state || '',                // W  - State
     issue.accountNumber || '',        // X  - Account Number
@@ -119,10 +117,11 @@ function logNewIssue(issue) {
     issue.rarcCode || '',             // AE - RARC Code
     issue.rarcCodeDesc || '',         // AF - RARC Description
     issue.denialCode ? (issue.denialCodeGroup || '') : '', // AG - CARC Group Code
-    issue.coverageLevel || ''         // AH - Coverage  Level
+    issue.coverageLevel || '',        // AH - Coverage Level
+    issue.ptid || '',                 // AI - PTID
+    issue.relatedAccounts || ''       // AJ - Related Account Numbers
   ]);
 
-  // Days Open formula
   var daysFormula = '=IF(ISBLANK(S' + nextRow + '), INT(TODAY()-K' + nextRow + '), INT(S' + nextRow + '-K' + nextRow + '))';
   sheet.getRange(nextRow, 20).setFormula(daysFormula);
 
@@ -151,30 +150,32 @@ function updateIssue(row, issue) {
     variance = (parseFloat(issue.paidAmount) || 0) - (parseFloat(issue.expectedAmount) || 0);
   }
 
-  // Only update editable fields — preserve Issue ID, Date Logged, Logged By, Stage, etc.
-  sheet.getRange(row, COL.ISSUE_TYPE + 1).setValue(issue.issueType         || existing[COL.ISSUE_TYPE]);
-  sheet.getRange(row, COL.PRACTICE + 1).setValue(issue.practice            || existing[COL.PRACTICE]);
-  sheet.getRange(row, COL.PRACTICE_NPI + 1).setValue(issue.practiceNPI     || existing[COL.PRACTICE_NPI]);
-  sheet.getRange(row, COL.PROVIDER + 1).setValue(issue.provider            || existing[COL.PROVIDER]);
-  sheet.getRange(row, COL.PROVIDER_NPI + 1).setValue(issue.providerNPI     || existing[COL.PROVIDER_NPI]);
-  sheet.getRange(row, COL.PAYER + 1).setValue(issue.payerName              || existing[COL.PAYER]);
-  sheet.getRange(row, COL.CPT + 1).setValue(issue.cpt                      || existing[COL.CPT]);
-  sheet.getRange(row, COL.DOS + 1).setValue(issue.dos                      || existing[COL.DOS]);
-  sheet.getRange(row, COL.EXPECTED_AMT + 1).setValue(issue.expectedAmount  || existing[COL.EXPECTED_AMT]);
-  sheet.getRange(row, COL.PAID_AMT + 1).setValue(issue.paidAmount          || existing[COL.PAID_AMT]);
+  sheet.getRange(row, COL.ISSUE_TYPE + 1).setValue(issue.issueType           || existing[COL.ISSUE_TYPE]);
+  sheet.getRange(row, COL.PRACTICE + 1).setValue(issue.practice              || existing[COL.PRACTICE]);
+  sheet.getRange(row, COL.PRACTICE_NPI + 1).setValue(issue.practiceNPI       || existing[COL.PRACTICE_NPI]);
+  sheet.getRange(row, COL.PROVIDER + 1).setValue(issue.provider              || existing[COL.PROVIDER]);
+  sheet.getRange(row, COL.PROVIDER_NPI + 1).setValue(issue.providerNPI       || existing[COL.PROVIDER_NPI]);
+  sheet.getRange(row, COL.PAYER + 1).setValue(issue.payerName                || existing[COL.PAYER]);
+  sheet.getRange(row, COL.CPT + 1).setValue(issue.cpt                        || existing[COL.CPT]);
+  sheet.getRange(row, COL.DOS + 1).setValue(issue.dos                        || existing[COL.DOS]);
+  sheet.getRange(row, COL.EXPECTED_AMT + 1).setValue(issue.expectedAmount    || existing[COL.EXPECTED_AMT]);
+  sheet.getRange(row, COL.PAID_AMT + 1).setValue(issue.paidAmount            || existing[COL.PAID_AMT]);
   sheet.getRange(row, COL.VARIANCE + 1).setValue(variance);
-  sheet.getRange(row, COL.ASSIGNED_TO + 1).setValue(issue.assignedTo       || existing[COL.ASSIGNED_TO]);
-  sheet.getRange(row, COL.ISSUE_DETAILS + 1).setValue(issue.denialCode     || existing[COL.ISSUE_DETAILS]);
-  sheet.getRange(row, COL.BATCH_ID + 1).setValue(issue.batchId             || existing[COL.BATCH_ID]);
-  sheet.getRange(row, COL.STATE + 1).setValue(issue.state                  || existing[COL.STATE]);
-  sheet.getRange(row, COL.ACCOUNT_NUMBER + 1).setValue(issue.accountNumber || existing[COL.ACCOUNT_NUMBER]);
+  sheet.getRange(row, COL.ASSIGNED_TO + 1).setValue(issue.assignedTo         || existing[COL.ASSIGNED_TO]);
+  sheet.getRange(row, COL.ISSUE_DETAILS + 1).setValue(issue.denialCode       || existing[COL.ISSUE_DETAILS]);
+  sheet.getRange(row, COL.BATCH_ID + 1).setValue(issue.batchId               || existing[COL.BATCH_ID]);
+  sheet.getRange(row, COL.STATE + 1).setValue(issue.state                    || existing[COL.STATE]);
+  sheet.getRange(row, COL.ACCOUNT_NUMBER + 1).setValue(issue.accountNumber   || existing[COL.ACCOUNT_NUMBER]);
   sheet.getRange(row, COL.DENIAL_CATEGORY + 1).setValue(issue.denialCategory || existing[COL.DENIAL_CATEGORY]);
   sheet.getRange(row, COL.DENIAL_DATE + 1).setValue(issue.denialRejectionDate || existing[COL.DENIAL_DATE]);
-  sheet.getRange(row, COL.COVERAGE_TYPE + 1).setValue(issue.coverageType   || existing[COL.COVERAGE_TYPE]);
+  sheet.getRange(row, COL.COVERAGE_TYPE + 1).setValue(issue.coverageType     || existing[COL.COVERAGE_TYPE]);
   sheet.getRange(row, COL.CARC_DESCRIPTION + 1).setValue(issue.denialCodeDesc || existing[COL.CARC_DESCRIPTION]);
-  sheet.getRange(row, COL.RARC_CODE + 1).setValue(issue.rarcCode           || existing[COL.RARC_CODE]);
-  sheet.getRange(row, COL.RARC_DESCRIPTION + 1).setValue(issue.rarcCodeDesc || existing[COL.RARC_DESCRIPTION]);
+  sheet.getRange(row, COL.RARC_CODE + 1).setValue(issue.rarcCode             || existing[COL.RARC_CODE]);
+  sheet.getRange(row, COL.RARC_DESCRIPTION + 1).setValue(issue.rarcCodeDesc  || existing[COL.RARC_DESCRIPTION]);
   sheet.getRange(row, COL.CARC_GROUP_CODE + 1).setValue(issue.denialCodeGroup || existing[COL.CARC_GROUP_CODE]);
+  sheet.getRange(row, COL.COVERAGE_LEVEL + 1).setValue(issue.coverageLevel   || existing[COL.COVERAGE_LEVEL]);
+  sheet.getRange(row, COL.PTID + 1).setValue(issue.ptid                      || existing[COL.PTID]);
+  sheet.getRange(row, COL.RELATED_ACCOUNTS + 1).setValue(issue.relatedAccounts || existing[COL.RELATED_ACCOUNTS]);
 
   logActivityFromSidebar(existing[COL.ISSUE_ID], '✏️ Claim edited by ' + getCurrentUser().name);
 
@@ -263,19 +264,10 @@ function logActivity(issueId, note, status) {
         }
       }
     }
-
-    activitySheet.appendRow([
-      timestamp,
-      issueId,
-      assignedTo,
-      note,
-      status || 'New',
-      newEntry
-    ]);
+    activitySheet.appendRow([timestamp, issueId, assignedTo, note, status || 'New', newEntry]);
   } else {
     var existingHistory = data[existingRow - 1][5] || '';
     var updatedHistory = existingHistory ? existingHistory + '\n' + newEntry : newEntry;
-
     activitySheet.getRange(existingRow, 1).setValue(timestamp);
     activitySheet.getRange(existingRow, 4).setValue(note);
     if (status) activitySheet.getRange(existingRow, 5).setValue(status);
@@ -355,7 +347,6 @@ function checkProgrammingAlert(errorType, practice) {
     if (data[i][0] === errorType) {
       alertsSheet.getRange(i + 1, 2).setValue(data[i][1] + 1);
       alertsSheet.getRange(i + 1, 3).setValue(new Date());
-
       var practices = data[i][4] ? data[i][4].split(', ') : [];
       if (practices.indexOf(practice) === -1) {
         practices.push(practice);
@@ -380,7 +371,6 @@ function getIssueData(row) {
   var sheet = ss.getSheetByName('Claims');
   var data = sheet.getRange(row, 1, 1, COL.TOTAL_COLS + 2).getValues()[0];
 
-  // Look up denial description
   var denialDescription = '';
   var refSheet = ss.getSheetByName('REF-Denials');
   if (refSheet && data[COL.DENIAL_CATEGORY]) {
@@ -393,7 +383,6 @@ function getIssueData(row) {
     }
   }
 
-  // Recalculate priority
   var autoTimelyDays = 90;
   var payersSheet = ss.getSheetByName('REF-Payers');
   if (payersSheet) {
@@ -412,7 +401,6 @@ function getIssueData(row) {
   }
 
   var recalcPriority = calculatePriority(data[COL.DOS], autoTimelyDays);
-
   if (recalcPriority !== data[COL.PRIORITY]) {
     sheet.getRange(row, COL.PRIORITY + 1).setValue(recalcPriority);
   }
@@ -420,7 +408,7 @@ function getIssueData(row) {
   return {
     row:                row,
     issueId:            data[COL.ISSUE_ID],
-    dateLogged:         data[COL.DATE_LOGGED]  ? String(data[COL.DATE_LOGGED])  : '',
+    dateLogged:         data[COL.DATE_LOGGED]         ? String(data[COL.DATE_LOGGED])         : '',
     loggedBy:           data[COL.LOGGED_BY],
     issueType:          data[COL.ISSUE_TYPE],
     practice:           data[COL.PRACTICE],
@@ -437,23 +425,26 @@ function getIssueData(row) {
     workflowStage:      data[COL.WORKFLOW_STAGE],
     priority:           recalcPriority,
     assignedTo:         data[COL.ASSIGNED_TO],
-    dateResolved:        data[COL.DATE_RESOLVED] ? String(data[COL.DATE_RESOLVED]) : '',
+    dateResolved:       data[COL.DATE_RESOLVED]       ? String(data[COL.DATE_RESOLVED])       : '',
     daysOpen:           data[COL.DAYS_OPEN],
     issueDetails:       data[COL.ISSUE_DETAILS],
     batchId:            data[COL.BATCH_ID],
     state:              data[COL.STATE],
     accountNumber:      data[COL.ACCOUNT_NUMBER],
     denialCategory:     data[COL.DENIAL_CATEGORY],
-    denialRejectionDate: data[COL.DENIAL_DATE]  ? String(data[COL.DENIAL_DATE])  : '',
-    appealDueDate:       data[COL.APPEAL_DUE]   ? String(data[COL.APPEAL_DUE])   : '',
-    resubmissionDate:    data[COL.RESUBMISSION_DATE] ? String(data[COL.RESUBMISSION_DATE]) : '',
+    denialRejectionDate:data[COL.DENIAL_DATE]         ? String(data[COL.DENIAL_DATE])         : '',
+    appealDueDate:      data[COL.APPEAL_DUE]          ? String(data[COL.APPEAL_DUE])          : '',
+    resubmissionDate:   data[COL.RESUBMISSION_DATE]   ? String(data[COL.RESUBMISSION_DATE])   : '',
     coverageType:       data[COL.COVERAGE_TYPE],
-    carcCode:           data[COL.ISSUE_DETAILS],       // Same column as issueDetails for denials
+    coverageLevel:      data[COL.COVERAGE_LEVEL],
+    carcCode:           data[COL.ISSUE_DETAILS],
     carcDescription:    data[COL.CARC_DESCRIPTION],
     carcAction:         getCARCAction(data[COL.ISSUE_DETAILS]),
     rarcCode:           data[COL.RARC_CODE],
     rarcDescription:    data[COL.RARC_DESCRIPTION],
     carcGroupCode:      data[COL.CARC_GROUP_CODE],
-    denialDescription:  denialDescription [COL.DENIAL_DATE],
+    denialDescription:  denialDescription,
+    ptid:               data[COL.PTID],
+    relatedAccounts:    data[COL.RELATED_ACCOUNTS]
   };
 }
