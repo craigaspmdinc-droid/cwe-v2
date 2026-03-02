@@ -280,8 +280,7 @@
 
   <div class="section-filters" id="sectionFilters">
     <button class="pill" onclick="toggleSection(this, 'Commercial')">Commercial</button>
-    <button class="pill" onclick="toggleSection(this, 'Medicare Part A')">Medicare Part A</button>
-    <button class="pill" onclick="toggleSection(this, 'Medicare Part B')">Medicare Part B</button>
+    <button class="pill" onclick="toggleSection(this, 'Original Medicare')">Original Medicare</button>
     <button class="pill" onclick="toggleSection(this, 'Medicare Advantage')">Medicare Advantage (Part C)</button>
     <button class="pill" onclick="toggleSection(this, 'Medicare Part D')">Medicare Part D</button>
     <button class="pill" onclick="toggleSection(this, 'Casualty')">Casualty</button>
@@ -346,7 +345,7 @@ var SCHEMAS = {
   },
   MassHealth: {
     title:      'MassHealth TPL Carrier Codes',
-    refName:    'REF-MassHealth TPL Carrier Codes',
+    refName:    'REF-MassHealth',
     sectionCol: 3,
     cols: [
       { idx: 0, label: 'Carrier Code', cls: 'col-code'    },
