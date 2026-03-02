@@ -1,6 +1,6 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════╗
- * ║              CLAIMS WORKFLOW ENGINE V2.4                              ║
+ * ║              CLAIMS WORKFLOW ENGINE V2.5                              ║
  * ║                    CWE-Dashboard.gs                                   ║
  * ║  PURPOSE: Dashboard data provider + launcher helpers                  ║
  * ╚═══════════════════════════════════════════════════════════════════════╝
@@ -19,7 +19,7 @@
  */
 
 // ── Open stages (claims that count toward metrics) ───────────────────
-var DASH_OPEN_STAGES = ['NEW', 'WORKING', 'ESCALATED', 'APPEALED', 'PENDING', 'PENDING INFO'];
+var DASH_OPEN_STAGES = ['NEW', 'WORKING', 'ESCALATED', 'APPEALED', 'PENDING', 'PENDING INFO', 'IN PROGRESS', 'CONTRACT PULLED', 'CONTRACT_PULLED'];
 var DASH_QUEUE_MAX   = 15;
 
 
@@ -30,8 +30,8 @@ var DASH_QUEUE_MAX   = 15;
 // ═══════════════════════════════════════════════════════════════════════
 function openDashboardSidebar() {
   var html = HtmlService
-    .createHtmlOutputFromFile('CWEApp')
-    .setTitle('CWE V2.4')
+    .createHtmlOutputFromFile('CWE-App')
+    .setTitle('CWE V2.5')
     .setWidth(450);
   SpreadsheetApp.getUi().showSidebar(html);
 }
@@ -42,23 +42,23 @@ function openDashboardSidebar() {
 // Bundles issue data + all server-side HTML builders into one payload.
 // ═══════════════════════════════════════════════════════════════════════
 function getWorkflowData(row) {
-  var issueData = getIssueData(row);
-  var user      = getCurrentUser();
-  var typeColor = getTypeColor(issueData.issueType);
+  var errors = [];
 
-  // Sanitize all fields — convert Dates to strings
-  var sanitized = {};
-  for (var key in issueData) {
-    var val = issueData[key];
-    if (val instanceof Date) {
-      sanitized[key] = val.toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'});
-    } else {
-      sanitized[key] = val;
-    }
-  }
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Claims');
+  if (!sheet) return { error: 'Claims sheet not found.' };
+
+  ss.setActiveSheet(sheet);
+  sheet.setActiveRange(sheet.getRange(row, 1));
+
+  var user, issueData, typeColor;
+  try { user      = getCurrentUser();   } catch(e) { return { error: 'Could not get user: ' + e.message }; }
+  try { issueData = getIssueData(row);  } catch(e) { return { error: 'Could not load claim: ' + e.message }; }
+  try { typeColor = getTypeColor(issueData.issueType); } catch(e) { typeColor = '#8b949e'; }
+
+  if (!canViewClaim(issueData, user)) return { error: 'You do not have permission to view this claim.' };
 
   var claimOptions = '', userOptions = '', payerInfo = '', macInfo = '', workflowHTML = '';
-  var errors = [];
 
   try { claimOptions = buildClaimOptions(issueData, user); } catch(e) { errors.push('claimOptions: '+e.message); }
   try { userOptions  = buildUserOptions(user);             } catch(e) { errors.push('userOptions: '+e.message); }
@@ -76,8 +76,10 @@ function getWorkflowData(row) {
     }
   }
 
+  if (errors.length) Logger.log('getWorkflowData warnings: ' + errors.join(' | '));
+
   return {
-    issue:        sanitized,
+    issue:        issueData,
     claimOptions: claimOptions,
     userOptions:  userOptions,
     payerInfo:    payerInfo,
@@ -151,17 +153,22 @@ function buildMACInfoDark(issue) {
 function buildWorkflowHTMLDark(issue, color) {
   var raw = buildRootCauseWorkflow(issue, color);
   return raw
+    // section title
     .replace(/class="section-title"/g, 'class="card-title"')
+    // callouts — simple class swap, no extra divs
     .replace(/class="alert"/g,   'class="callout warn"')
     .replace(/class="info"/g,    'class="callout info"')
     .replace(/class="success"/g, 'class="callout success"')
+    // workflow options
     .replace(/class="workflow-option"/g, 'class="wf-option"')
     .replace(/class="option-label"/g,    'class="wf-opt-label"')
     .replace(/class="option-desc"/g,     'class="wf-opt-desc"')
+    // buttons — success first (more specific) then primary then secondary
     .replace(/class="btn btn-primary" style="background:#10b981;"/g, 'class="wf-btn wf-btn-success"')
     .replace(/class="btn btn-primary" style="background:#10b981"/g,  'class="wf-btn wf-btn-success"')
     .replace(/class="btn btn-primary"/g,   'class="wf-btn wf-btn-primary"')
     .replace(/class="btn btn-secondary"/g, 'class="wf-btn wf-btn-secondary"')
+    // research form inputs
     .replace(/style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:7px;font-size:12px;margin-bottom:8px;"/g, 'class="wf-input"')
     .replace(/style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:7px;font-size:12px;min-height:60px;margin-bottom:8px;"/g, 'class="wf-input"')
     .replace(/style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:7px;font-size:12px;min-height:60px;"/g, 'class="wf-input"')
@@ -200,13 +207,13 @@ function getDashboardData() {
     var myQueue          = [];
 
     data.forEach(function(row, idx) {
-      var stage       = String(row[COL.WORKFLOW_STAGE] || '').trim().toUpperCase();
-      var priority    = String(row[COL.PRIORITY]       || '').trim();
-      var assignee    = String(row[COL.ASSIGNED_TO]    || '').trim();
-      var variance    = Math.abs(parseFloat(row[COL.VARIANCE]) || 0);
+      var stage    = String(row[COL.WORKFLOW_STAGE] || '').trim().toUpperCase();
+      var priority = String(row[COL.PRIORITY]       || '').trim().toUpperCase();
+      var assignee = String(row[COL.ASSIGNED_TO]    || '').trim();
+      var variance = Math.abs(parseFloat(row[COL.VARIANCE]) || 0);
 
       // Skip closed/resolved claims
-      if (row[COL.DATE_RESOLVED]) return;
+      if (DASH_OPEN_STAGES.indexOf(stage) === -1) return;
 
       // Respect group-level visibility (Analysts see only their group)
       var claimObj = { assignedTo: row[COL.ASSIGNED_TO] };
@@ -214,12 +221,14 @@ function getDashboardData() {
 
       totalOpen++;
       if (variance > 0) totalVariance += variance;
-      if (priority.toUpperCase().indexOf('CRITICAL') > -1 || priority.toUpperCase().indexOf('HIGH') > -1) criticalHigh++;
+      if (priority.indexOf('CRITICAL') > -1 || priority.indexOf('HIGH') > -1) criticalHigh++;
       if (stage === 'ESCALATED') escalatedCount++;
 
-      // Stage breakdown
-      var stageDisplay = String(row[COL.WORKFLOW_STAGE] || '').trim();
-      byStageCounts[stageDisplay] = (byStageCounts[stageDisplay] || 0) + 1;
+      // Stage breakdown — raw display value for canvas matching
+      var stageRaw = String(row[COL.WORKFLOW_STAGE] || '').trim();
+      if (stageRaw) {
+        byStageCounts[stageRaw] = (byStageCounts[stageRaw] || 0) + 1;
+      }
 
       // Priority breakdown
       if (priority) {
