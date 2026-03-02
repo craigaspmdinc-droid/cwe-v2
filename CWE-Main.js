@@ -37,7 +37,6 @@ var USERS = {
 };
 
 // ── Column index constants (zero-based, matches getRange data arrays) ──
-// Use these instead of magic numbers throughout all scripts
 var COL = {
   ISSUE_ID:          0,   // A
   DATE_LOGGED:       1,   // B
@@ -72,7 +71,8 @@ var COL = {
   RARC_CODE:         30,  // AE
   RARC_DESCRIPTION:  31,  // AF
   CARC_GROUP_CODE:   32,  // AG
-  TOTAL_COLS:        33   // Always fetch at least this many columns
+  COVERAGE_LEVEL:    33,  // AH  ← NEW: Primary / Secondary / Tertiary
+  TOTAL_COLS:        34   // Always fetch at least this many columns
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -92,7 +92,7 @@ function getVisibleUsers(user) {
       visible.push(USERS[email].name);
     }
   } else {
-    visible.push('Craig'); // Admin always visible
+    visible.push('Craig');
 
     for (var email in USERS) {
       var u = USERS[email];
@@ -101,7 +101,6 @@ function getVisibleUsers(user) {
       }
     }
 
-    // Add other groups as labels
     if (user.group === 'A3MB') {
       visible.push('Accudoc');
     } else if (user.group === 'Accudoc') {

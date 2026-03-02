@@ -199,14 +199,26 @@
         <select id="payer" onchange="loadCoverageTypes()">
           <option value="">Select payer...</option>
         </select>
+
         <label style="margin-top:12px;">Coverage Type</label>
         <select id="coverageType" onchange="loadPlanTypes()">
           <option value="">Select coverage type...</option>
         </select>
+
         <label style="margin-top:12px;">Plan Type</label>
         <select id="planType">
           <option value="">Select plan type...</option>
         </select>
+
+        <label style="margin-top:12px;">Coverage Level</label>
+        <select id="coverageLevel">
+          <option value="">Select coverage level...</option>
+          <option value="Primary">Primary</option>
+          <option value="Secondary">Secondary</option>
+          <option value="Tertiary">Tertiary</option>
+        </select>
+        <div class="help-text">Is this payer the primary, secondary, or tertiary insurer?</div>
+
         <label style="margin-top:12px;">CPT Code</label>
         <input type="text" id="cpt" oninput="checkGlobalPeriod()">
         <div id="globalPeriodWarning" style="display:none; background:#fef3c7; border-left:3px solid #f59e0b; padding:10px; border-radius:6px; margin-top:6px; font-size:12px;"></div>
@@ -310,7 +322,6 @@
     var carcSelection = null;
     var rarcSelection = null;
 
-    // Edit mode
     var editRow = <?!= editRow ? editRow : 'null' ?>;
     var existing = <?= JSON.stringify(existing) ?>;
 
@@ -339,6 +350,7 @@
         if (existing.expectedAmount)    document.getElementById('expectedAmount').value = existing.expectedAmount;
         if (existing.paidAmount)        document.getElementById('paidAmount').value = existing.paidAmount;
         if (existing.assignedTo)        document.getElementById('assignedTo').value = existing.assignedTo;
+        if (existing.coverageLevel)     document.getElementById('coverageLevel').value = existing.coverageLevel;
         if (existing.carcCode) {
           carcSelection = { code: existing.carcCode, description: existing.carcDescription || '', groupCode: existing.carcGroupCode || '' };
           document.getElementById('carcCode').value = existing.carcCode;
@@ -509,14 +521,10 @@
       document.getElementById(selectedId).style.display = 'block';
       if (type === 'CARC') {
         carcSelection = { code: code, description: description, groupCode: groupCode };
-        // Auto-fill Denial Category if provided and not already set
         if (denialCategory) {
           var sel = document.getElementById('denialCategory');
           for (var i = 0; i < sel.options.length; i++) {
-            if (sel.options[i].value === denialCategory) {
-              sel.selectedIndex = i;
-              break;
-            }
+            if (sel.options[i].value === denialCategory) { sel.selectedIndex = i; break; }
           }
         }
       } else {
@@ -552,23 +560,24 @@
       var practiceSelect = document.getElementById('practice');
       var providerSelect = document.getElementById('provider');
       var issue = {
-        issueType: selectedType,
-        practiceId: selectedPractice ? selectedPractice.id : '',
-        practice: practiceSelect.options[practiceSelect.selectedIndex].text,
-        practiceNPI: selectedPractice ? selectedPractice.npi : '',
-        state: selectedPractice ? selectedPractice.state : '',
-        provider: providerSelect.options[providerSelect.selectedIndex].text,
-        providerNPI: providerSelect.value,
-        priority: 'Auto',
-        assignedTo: document.getElementById('assignedTo').value,
-        notes: document.getElementById('notes').value
+        issueType:    selectedType,
+        practiceId:   selectedPractice ? selectedPractice.id : '',
+        practice:     practiceSelect.options[practiceSelect.selectedIndex].text,
+        practiceNPI:  selectedPractice ? selectedPractice.npi : '',
+        state:        selectedPractice ? selectedPractice.state : '',
+        provider:     providerSelect.options[providerSelect.selectedIndex].text,
+        providerNPI:  providerSelect.value,
+        priority:     'Auto',
+        assignedTo:   document.getElementById('assignedTo').value,
+        notes:        document.getElementById('notes').value
       };
       if (selectedType !== 'Internal') {
-        issue.payerName = document.getElementById('payer').value;
-        issue.coverageType = document.getElementById('coverageType').value;
-        issue.planType = document.getElementById('planType').value;
-        issue.cpt = document.getElementById('cpt').value;
-        issue.dos = document.getElementById('dos').value;
+        issue.payerName      = document.getElementById('payer').value;
+        issue.coverageType   = document.getElementById('coverageType').value;
+        issue.planType       = document.getElementById('planType').value;
+        issue.coverageLevel  = document.getElementById('coverageLevel').value;
+        issue.cpt            = document.getElementById('cpt').value;
+        issue.dos            = document.getElementById('dos').value;
         issue.denialRejectionDate = document.getElementById('denialRejectionDate').value;
         var accountInput = document.getElementById('accountNumberInput').value.trim();
         if (accountInput) {
@@ -578,26 +587,26 @@
       }
       if (selectedType === 'Denial') {
         var catSelect = document.getElementById('denialCategory');
-        issue.denialCategory = catSelect.value;
+        issue.denialCategory     = catSelect.value;
         issue.suggestedRootCause = catSelect.options[catSelect.selectedIndex] ? catSelect.options[catSelect.selectedIndex].getAttribute('data-rootcause') : '';
-        issue.denialCode = carcSelection ? carcSelection.code : document.getElementById('carcCode').value;
-        issue.denialCodeGroup = carcSelection ? carcSelection.groupCode : '';
-        issue.rarcCode = rarcSelection ? rarcSelection.code : document.getElementById('rarcCode').value;
-        issue.denialCodeDesc = carcSelection ? carcSelection.description : '';
-        issue.rarcCodeDesc = rarcSelection ? rarcSelection.description : '';
-        issue.additionalCodes = document.getElementById('additionalCodes').value;
+        issue.denialCode         = carcSelection ? carcSelection.code : document.getElementById('carcCode').value;
+        issue.denialCodeGroup    = carcSelection ? carcSelection.groupCode : '';
+        issue.rarcCode           = rarcSelection ? rarcSelection.code : document.getElementById('rarcCode').value;
+        issue.denialCodeDesc     = carcSelection ? carcSelection.description : '';
+        issue.rarcCodeDesc       = rarcSelection ? rarcSelection.description : '';
+        issue.additionalCodes    = document.getElementById('additionalCodes').value;
       } else if (selectedType === 'Rejection') {
         var rejCatSelect = document.getElementById('rejectionCategory');
-        issue.denialCategory = rejCatSelect.value;
+        issue.denialCategory     = rejCatSelect.value;
         issue.suggestedRootCause = rejCatSelect.options[rejCatSelect.selectedIndex] ? rejCatSelect.options[rejCatSelect.selectedIndex].getAttribute('data-rootcause') : '';
-        issue.rejectionReason = document.getElementById('rejectionReason').value;
+        issue.rejectionReason    = document.getElementById('rejectionReason').value;
       } else if (selectedType === 'Payment') {
         issue.expectedAmount = parseFloat(document.getElementById('expectedAmount').value) || 0;
-        issue.paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
-        issue.paymentType = document.getElementById('paymentType').value;
+        issue.paidAmount     = parseFloat(document.getElementById('paidAmount').value) || 0;
+        issue.paymentType    = document.getElementById('paymentType').value;
       } else if (selectedType === 'Internal') {
-        issue.batchId = document.getElementById('batchId').value;
-        issue.errorType = document.getElementById('errorType').value;
+        issue.batchId    = document.getElementById('batchId').value;
+        issue.errorType  = document.getElementById('errorType').value;
       }
       if (!issue.practice) { alert('Practice is required'); return; }
       google.script.run
@@ -614,27 +623,28 @@
       var practiceSelect = document.getElementById('practice');
       var providerSelect = document.getElementById('provider');
       var issue = {
-        issueType: selectedType,
-        practice: practiceSelect.options[practiceSelect.selectedIndex].text,
-        practiceNPI: selectedPractice ? selectedPractice.npi : '',
-        state: selectedPractice ? selectedPractice.state : '',
-        provider: providerSelect.options[providerSelect.selectedIndex].text,
-        providerNPI: providerSelect.value,
-        assignedTo: document.getElementById('assignedTo').value,
-        payerName: document.getElementById('payer').value || existing.payerName,
+        issueType:    selectedType,
+        practice:     practiceSelect.options[practiceSelect.selectedIndex].text,
+        practiceNPI:  selectedPractice ? selectedPractice.npi : '',
+        state:        selectedPractice ? selectedPractice.state : '',
+        provider:     providerSelect.options[providerSelect.selectedIndex].text,
+        providerNPI:  providerSelect.value,
+        assignedTo:   document.getElementById('assignedTo').value,
+        payerName:    document.getElementById('payer').value || existing.payerName,
         coverageType: document.getElementById('coverageType').value || existing.coverageType,
-        cpt: document.getElementById('cpt').value,
-        dos: document.getElementById('dos').value,
+        coverageLevel: document.getElementById('coverageLevel').value || existing.coverageLevel,
+        cpt:          document.getElementById('cpt').value,
+        dos:          document.getElementById('dos').value,
         accountNumber: document.getElementById('accountNumberInput').value,
         denialRejectionDate: document.getElementById('denialRejectionDate').value,
         denialCategory: document.getElementById('denialCategory').value || document.getElementById('rejectionCategory').value,
-        denialCode: carcSelection ? carcSelection.code : document.getElementById('carcCode').value,
+        denialCode:     carcSelection ? carcSelection.code : document.getElementById('carcCode').value,
         denialCodeGroup: carcSelection ? carcSelection.groupCode : existing.carcGroupCode,
-        denialCodeDesc: carcSelection ? carcSelection.description : existing.carcDescription,
-        rarcCode: rarcSelection ? rarcSelection.code : document.getElementById('rarcCode').value,
-        rarcCodeDesc: rarcSelection ? rarcSelection.description : existing.rarcDescription,
-        expectedAmount: parseFloat(document.getElementById('expectedAmount').value) || 0,
-        paidAmount: parseFloat(document.getElementById('paidAmount').value) || 0
+        denialCodeDesc:  carcSelection ? carcSelection.description : existing.carcDescription,
+        rarcCode:        rarcSelection ? rarcSelection.code : document.getElementById('rarcCode').value,
+        rarcCodeDesc:    rarcSelection ? rarcSelection.description : existing.rarcDescription,
+        expectedAmount:  parseFloat(document.getElementById('expectedAmount').value) || 0,
+        paidAmount:      parseFloat(document.getElementById('paidAmount').value) || 0
       };
       google.script.run
         .withSuccessHandler(function() {

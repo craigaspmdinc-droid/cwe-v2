@@ -66,7 +66,8 @@ function showEditIssueForm(row) {
     carcGroupCode:       data[COL.CARC_GROUP_CODE],
     assignedTo:          data[COL.ASSIGNED_TO],
     batchId:             data[COL.BATCH_ID],
-    state:               data[COL.STATE]
+    state:               data[COL.STATE],
+    coverageLevel:       data[COL.COVERAGE_LEVEL]
   };
 
   var practiceOptions = practices.map(function(p) {
@@ -111,10 +112,6 @@ function openWorkflowSidebarById(issueId) {
 }
 
 function openWorkflowSidebarByRow(row) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Claims');
-  ss.setActiveSheet(sheet);
-  sheet.setActiveRange(sheet.getRange(row, 1));
   openDashboardSidebar();
 }
 
