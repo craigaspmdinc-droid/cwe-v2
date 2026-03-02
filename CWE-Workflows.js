@@ -118,7 +118,8 @@ function logNewIssue(issue) {
     issue.denialCodeDesc || '',       // AD - CARC Description
     issue.rarcCode || '',             // AE - RARC Code
     issue.rarcCodeDesc || '',         // AF - RARC Description
-    issue.denialCode ? (issue.denialCodeGroup || '') : '' // AG - CARC Group Code
+    issue.denialCode ? (issue.denialCodeGroup || '') : '', // AG - CARC Group Code
+    issue.coverageLevel || ''         // AH - Coverage  Level
   ]);
 
   // Days Open formula
@@ -419,7 +420,7 @@ function getIssueData(row) {
   return {
     row:                row,
     issueId:            data[COL.ISSUE_ID],
-    dateLogged:         data[COL.DATE_LOGGED],
+    dateLogged:         data[COL.DATE_LOGGED]  ? String(data[COL.DATE_LOGGED])  : '',
     loggedBy:           data[COL.LOGGED_BY],
     issueType:          data[COL.ISSUE_TYPE],
     practice:           data[COL.PRACTICE],
@@ -436,16 +437,16 @@ function getIssueData(row) {
     workflowStage:      data[COL.WORKFLOW_STAGE],
     priority:           recalcPriority,
     assignedTo:         data[COL.ASSIGNED_TO],
-    dateResolved:       data[COL.DATE_RESOLVED],
+    dateResolved:        data[COL.DATE_RESOLVED] ? String(data[COL.DATE_RESOLVED]) : '',
     daysOpen:           data[COL.DAYS_OPEN],
     issueDetails:       data[COL.ISSUE_DETAILS],
     batchId:            data[COL.BATCH_ID],
     state:              data[COL.STATE],
     accountNumber:      data[COL.ACCOUNT_NUMBER],
     denialCategory:     data[COL.DENIAL_CATEGORY],
-    denialRejectionDate:data[COL.DENIAL_DATE],
-    appealDueDate:      data[COL.APPEAL_DUE],
-    resubmissionDate:   data[COL.RESUBMISSION_DATE],
+    denialRejectionDate: data[COL.DENIAL_DATE]  ? String(data[COL.DENIAL_DATE])  : '',
+    appealDueDate:       data[COL.APPEAL_DUE]   ? String(data[COL.APPEAL_DUE])   : '',
+    resubmissionDate:    data[COL.RESUBMISSION_DATE] ? String(data[COL.RESUBMISSION_DATE]) : '',
     coverageType:       data[COL.COVERAGE_TYPE],
     carcCode:           data[COL.ISSUE_DETAILS],       // Same column as issueDetails for denials
     carcDescription:    data[COL.CARC_DESCRIPTION],
@@ -453,6 +454,6 @@ function getIssueData(row) {
     rarcCode:           data[COL.RARC_CODE],
     rarcDescription:    data[COL.RARC_DESCRIPTION],
     carcGroupCode:      data[COL.CARC_GROUP_CODE],
-    denialDescription:  denialDescription
+    denialDescription:  denialDescription [COL.DENIAL_DATE],
   };
 }
