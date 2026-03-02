@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ── Design tokens — matches CWE design system exactly ── */
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #21262d;
+    --border:   #30363d;
+    --accent:   #58a6ff;
+    --green:    #3fb950;
+    --warn:     #d29922;
+    --danger:   #f85149;
+    --purple:   #a5a3ff;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --highlight-bg: rgba(88, 166, 255, 0.18);
+    --highlight-text: #58a6ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px 12px;
+    flex-shrink: 0;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge {
+    background: var(--accent);
+    color: var(--bg);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+
+  .title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.01em;
+  }
+
+  .subtitle {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .row-count {
+    font-size: 10px;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* ── Tab nav ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .tab {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+  }
+
+  .tab:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+
+  /* ── Search bar ── */
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 13px;
+    pointer-events: none;
+  }
+
+  #searchInput {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px 12px 8px 34px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  #searchInput::placeholder { color: var(--muted); }
+  #searchInput:focus { border-color: var(--accent); }
+
+  .search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface2);
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: none;
+    font-family: inherit;
+  }
+
+  .search-clear:hover { color: var(--text); }
+
+  /* ── Table area ── */
+  .table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 0 0 8px;
+  }
+
+  /* Scrollbar */
+  .table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .table-wrap::-webkit-scrollbar-track { background: var(--bg); }
+  .table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 500px;
+  }
+
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  th {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 8px 12px;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  td {
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+    color: var(--text);
+    font-size: 12px;
+    padding: 7px 12px;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  tr:hover td { background: var(--surface2); }
+
+  tr.hidden { display: none; }
+
+  /* Column-specific styles */
+  .col-code {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 12px;
+    white-space: nowrap;
+    width: 70px;
+  }
+
+  .col-group {
+    color: var(--warn);
+    font-size: 11px;
+    white-space: nowrap;
+    width: 70px;
+  }
+
+  .col-action {
+    color: var(--green);
+    font-size: 11px;
+    max-width: 220px;
+  }
+
+  .col-state {
+    color: var(--purple);
+    font-weight: 700;
+    font-size: 11px;
+    white-space: nowrap;
+    width: 48px;
+  }
+
+  .col-phone {
+    color: var(--muted);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .col-juris {
+    color: var(--warn);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .col-desc {
+    max-width: 300px;
+    color: var(--text);
+    font-size: 12px;
+  }
+
+  /* Highlight matches */
+  mark {
+    background: var(--highlight-bg);
+    color: var(--highlight-text);
+    border-radius: 2px;
+    padding: 0 1px;
+    font-weight: 700;
+  }
+
+  /* ── Empty / loading states ── */
+  .state-msg {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .state-msg .icon { font-size: 28px; margin-bottom: 10px; display: block; }
+
+  .no-results {
+    display: none;
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .no-results .hl { color: var(--accent); }
+
+  /* ── Footer ── */
+  .footer {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .footer-left {
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .match-count {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .btn-close {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 14px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-close:hover {
+    border-color: var(--muted);
+    color: var(--text);
+  }
+
+  /* ── Loading spinner ── */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-row td {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="header-left">
+      <span class="badge">REF</span>
+      <div>
+        <div class="title" id="refTitle">Reference Viewer</div>
+        <div class="subtitle">CWE V2.5 — Internal Reference Data</div>
+      </div>
+    </div>
+    <div class="row-count" id="rowCount"></div>
+  </div>
+
+  <div class="tabs" id="tabBar">
+    <button class="tab" onclick="loadRef('CARC')">📋 CARC</button>
+    <button class="tab" onclick="loadRef('MACs')">🗺 MACs</button>
+    <button class="tab" onclick="loadRef('MassHealth')">🏛 MassHealth</button>
+    <button class="tab" onclick="loadRef('GlobalPeriods')">📅 Global Periods</button>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="searchInput" placeholder="Search codes, descriptions, actions…" oninput="onSearch(this.value)" autocomplete="off" />
+    <button class="search-clear" id="clearBtn" onclick="clearSearch()">✕ clear</button>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <div class="state-msg" id="stateMsg">
+    <span class="icon">📂</span>
+    Select a reference tab above to load data.
+  </div>
+  <table id="refTable" style="display:none;">
+    <thead id="refHead"></thead>
+    <tbody id="refBody"></tbody>
+  </table>
+  <div class="no-results" id="noResults">
+    No matches for "<span class="hl" id="noResultsQuery"></span>" —
+    try a shorter term or different column.
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-left">
+    <span id="matchLabel">—</span>
+  </div>
+  <button class="btn-close" onclick="google.script.host.close()">✕ Close</button>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+var _currentRef = null;
+var _allRows    = [];   // raw string arrays from server
+var _headers    = [];
+var _schema     = null; // column config for current ref
+
+// ── Schema per REF sheet ───────────────────────────────────────────────
+// Defines which server columns to show, labels, and CSS class
+var SCHEMAS = {
+  CARC: {
+    title:   'CARC Reference',
+    refName: 'REF-CARC',
+    cols: [
+      { idx: 0, label: 'Code',        cls: 'col-code'  },
+      { idx: 1, label: 'Description', cls: 'col-desc'  },
+      { idx: 2, label: 'Group',       cls: 'col-group' },
+      { idx: 4, label: 'Action',      cls: 'col-action'},
+    ]
+  },
+  MACs: {
+    title:   'MAC Jurisdiction Map',
+    refName: 'REF-MACs',
+    cols: [
+      { idx: 0, label: 'State',        cls: 'col-state' },
+      { idx: 1, label: 'Billing Type', cls: ''          },
+      { idx: 2, label: 'MAC Name',     cls: 'col-desc'  },
+      { idx: 3, label: 'Phone',        cls: 'col-phone' },
+      { idx: 4, label: 'Jurisdiction', cls: 'col-juris' },
+    ]
+  },
+  MassHealth: {
+    title:   'MassHealth Carrier Codes',
+    refName: 'REF-MassHealth',
+    cols: [
+      { idx: 0, label: 'Code',        cls: 'col-code'  },
+      { idx: 1, label: 'Description', cls: 'col-desc'  },
+    ]
+  },
+  GlobalPeriods: {
+    title:   'Global Period Reference',
+    refName: 'REF-GlobalPeriods',
+    cols: [
+      { idx: 0, label: 'CPT Code',    cls: 'col-code'  },
+      { idx: 1, label: 'Description', cls: 'col-desc'  },
+      { idx: 2, label: 'Period',      cls: 'col-group' },
+    ]
+  }
+};
+
+// ── Tab load ───────────────────────────────────────────────────────────
+function loadRef(key) {
+  if (!SCHEMAS[key]) return;
+  _currentRef = key;
+  _schema     = SCHEMAS[key];
+
+  // Update tabs
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  event.target.classList.add('active');
+
+  // Update header title
+  document.getElementById('refTitle').textContent = _schema.title;
+
+  // Clear search
+  document.getElementById('searchInput').value = '';
+  document.getElementById('clearBtn').style.display = 'none';
+
+  // Show loading
+  var tbody = document.getElementById('refBody');
+  var table = document.getElementById('refTable');
+  document.getElementById('stateMsg').style.display = 'none';
+  document.getElementById('noResults').style.display = 'none';
+  table.style.display = 'table';
+  document.getElementById('rowCount').textContent = '';
+  document.getElementById('matchLabel').textContent = 'Loading…';
+
+  // Build header
+  var thead = document.getElementById('refHead');
+  thead.innerHTML = '<tr>' + _schema.cols.map(function(c) {
+    return '<th>' + c.label + '</th>';
+  }).join('') + '</tr>';
+
+  // Loading placeholder
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="' + _schema.cols.length + '">' +
+    '<span class="spinner"></span>Loading ' + _schema.title + '…</td></tr>';
+
+  // Fetch from server
+  google.script.run
+    .withSuccessHandler(function(data) { onDataLoaded(data); })
+    .withFailureHandler(function(err)  { onDataError(err);   })
+    .cweGetRefData(_schema.refName);
+}
+
+// ── Data loaded ────────────────────────────────────────────────────────
+function onDataLoaded(data) {
+  _allRows = data || [];
+  renderTable(_allRows, '');
+  var total = _allRows.length;
+  document.getElementById('rowCount').textContent = total + ' rows';
+  document.getElementById('matchLabel').textContent = total + ' rows';
+}
+
+function onDataError(err) {
+  document.getElementById('refBody').innerHTML =
+    '<tr class="loading-row"><td colspan="5" style="color:var(--danger)">⚠ Error loading data: ' +
+    (err.message || err) + '</td></tr>';
+  document.getElementById('matchLabel').textContent = 'Error';
+}
+
+// ── Render table ───────────────────────────────────────────────────────
+function renderTable(rows, query) {
+  var tbody = document.getElementById('refBody');
+  var q     = query.trim().toLowerCase();
+  var cols  = _schema.cols;
+
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="' + cols.length +
+      '" style="color:var(--muted)">No data found in this sheet.</td></tr>';
+    return;
+  }
+
+  var visibleCount = 0;
+  var html = '';
+
+  rows.forEach(function(row) {
+    // Check if row matches query
+    var rowText = cols.map(function(c) {
+      return (row[c.idx] || '').toString().toLowerCase();
+    }).join(' ');
+
+    var matches = !q || rowText.indexOf(q) !== -1;
+    if (!matches) { html += '<!-- hidden -->'; return; }
+
+    visibleCount++;
+    html += '<tr>';
+    cols.forEach(function(c) {
+      var raw = (row[c.idx] || '').toString();
+      var display = q ? highlight(raw, query) : escapeHtml(raw);
+      html += '<td class="' + c.cls + '">' + display + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  tbody.innerHTML = html || '<tr class="loading-row"><td colspan="' + cols.length + '"></td></tr>';
+
+  // Show/hide no-results
+  var noResults = document.getElementById('noResults');
+  if (q && visibleCount === 0) {
+    noResults.style.display = 'block';
+    document.getElementById('noResultsQuery').textContent = query;
+    document.getElementById('refTable').style.display = 'none';
+  } else {
+    noResults.style.display = 'none';
+    document.getElementById('refTable').style.display = 'table';
+  }
+
+  // Update count
+  var total = rows.length;
+  if (q) {
+    document.getElementById('matchLabel').innerHTML =
+      '<span class="match-count">' + visibleCount + '</span> of ' + total + ' rows match';
+  } else {
+    document.getElementById('matchLabel').textContent = total + ' rows';
+  }
+}
+
+// ── Search ─────────────────────────────────────────────────────────────
+var _searchTimer = null;
+function onSearch(val) {
+  document.getElementById('clearBtn').style.display = val ? 'block' : 'none';
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(function() {
+    renderTable(_allRows, val);
+  }, 80); // tiny debounce keeps it snappy
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('clearBtn').style.display = 'none';
+  renderTable(_allRows, '');
+  document.getElementById('searchInput').focus();
+}
+
+// ── Highlight helper ───────────────────────────────────────────────────
+function highlight(text, query) {
+  if (!query) return escapeHtml(text);
+  var escaped  = escapeHtml(text);
+  var escapedQ = escapeRegex(query);
+  return escaped.replace(new RegExp('(' + escapedQ + ')', 'gi'),
+    '<mark>$1</mark>');
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ── Auto-load from URL param ───────────────────────────────────────────
+// When opened via openRefSidebar('CARC'), server passes ?ref=CARC
+(function() {
+  // google.script.url.getLocation is async — use message channel instead
+  // The opener sets window.name to the ref key before showing dialog
+  var key = window.name;
+  if (key && SCHEMAS[key]) {
+    // Simulate tab click
+    setTimeout(function() {
+      var tabs = document.querySelectorAll('.tab');
+      var keys = ['CARC','MACs','MassHealth','GlobalPeriods'];
+      var idx  = keys.indexOf(key);
+      if (idx !== -1 && tabs[idx]) {
+        // Fake event for loadRef
+        var fakeEvt = { target: tabs[idx] };
+        window.event = fakeEvt;
+        tabs[idx].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }
+    }, 100);
+  }
+})();
+</script>
+</body>
+</html>
