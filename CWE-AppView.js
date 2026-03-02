@@ -1,6 +1,6 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════╗
- * ║              CLAIMS WORKFLOW ENGINE V2.4                              ║
+ * ║              CLAIMS WORKFLOW ENGINE V2.5                              ║
  * ║                    CWE-AppView.gs                                     ║
  * ║  PURPOSE: Single-screen interactive app canvas — NO CELL MERGING     ║
  * ╚═══════════════════════════════════════════════════════════════════════╝
@@ -31,7 +31,7 @@ function setupAppView() {
   cweSetChrome(ss);
   SpreadsheetApp.flush();
   SpreadsheetApp.getActiveSpreadsheet().toast(
-    'App view active! Install onSelectionChange trigger to enable action tiles.',
+    'App view active! Add drawing buttons over the action tiles.',
     '✅ CWE V2.5', 6
   );
 }
@@ -51,7 +51,6 @@ function refreshMetrics() {
   ];
   Logger.log('refreshMetrics: open=' + metrics.totalOpen + ' critical=' + metrics.criticalHigh);
   mTiles.forEach(function(t) {
-    // Value cell (row 8)
     var cell = sheet.getRange(8, t.col);
     cell.setValue(t.val);
     cell.setNumberFormat('@');
@@ -62,7 +61,6 @@ function refreshMetrics() {
     cell.setHorizontalAlignment('center');
     cell.setVerticalAlignment('middle');
     cell.setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
-    // Label cell (row 9) — always rewrite in case it was cleared
     var lbl = sheet.getRange(9, t.col);
     lbl.setValue(t.lbl);
     lbl.setFontSize(9);
@@ -73,13 +71,11 @@ function refreshMetrics() {
     lbl.setVerticalAlignment('top');
   });
 
-  // Update timestamp in top bar
   var ts = 'Updated  ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMM d, yyyy  h:mm a');
   sheet.getRange(1, 8).setValue(ts)
     .setFontSize(9).setFontColor(C.MUTED).setBackground(C.SURFACE)
     .setHorizontalAlignment('right').setVerticalAlignment('middle');
 
-  // Update stage counts
   var stageCounts = metrics.byStageCounts || {};
   var stageList = [
     { lbl: 'NEW',          color: C.ACCENT, aliases: ['NEW'] },
@@ -112,8 +108,6 @@ function refreshMetrics() {
 }
 
 function refreshCanvas() {
-  // Full rebuild — USE SPARINGLY, wipes drawings
-  // Use refreshMetrics() for routine updates
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   cweBuildCanvas(ss);
   cweHideDataSheets(ss);
@@ -152,34 +146,71 @@ function cweHideDataSheets(ss) {
 function cweSetChrome(ss) {
   var name = ss.getName();
   if (name.toLowerCase().indexOf('sheet') > -1 || name.toLowerCase().indexOf('untitled') > -1) {
-    ss.rename('Claims Workflow Engine V2.4');
+    ss.rename('Claims Workflow Engine V2.5');
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// INTERNAL REFERENCE SHEET OPENERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function openRefSidebar(key) {
+  var titles = {
+    CARC:          'CARC Reference',
+    MACs:          'MAC Jurisdiction Map',
+    MassHealth:    'MassHealth Carrier Codes',
+    GlobalPeriods: 'Global Period Reference',
+  };
+  var title = titles[key] || 'Reference Viewer';
+  var html = HtmlService.createHtmlOutputFromFile('CWERefViewer')
+    .setWidth(800).setHeight(620);
+  html.setContent(html.getContent().replace(
+    'var key = window.name;',
+    'var key = ' + JSON.stringify(key) + ';'
+  ));
+  SpreadsheetApp.getUi().showModalDialog(html, '📂 ' + title);
+}
+
+function openRefCARC()          { openRefSidebar('CARC');          }
+function openRefMACs()          { openRefSidebar('MACs');          }
+function openRefMassHealth()    { openRefSidebar('MassHealth');    }
+function openRefGlobalPeriods() { openRefSidebar('GlobalPeriods'); }
+
+function cweGetRefData(sheetName) {
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) throw new Error(sheetName + ' sheet not found. Check Admin Tools → Show All Sheets.');
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2 || lastCol < 1) return [];
+  var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  return data
+    .map(function(row) {
+      return row.map(function(cell) {
+        return cell === null || cell === undefined ? '' : String(cell);
+      });
+    })
+    .filter(function(row) {
+      return row.some(function(cell) { return cell.trim() !== ''; });
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // CANVAS BUILDER — zero cell merging
-// All layout done with column widths + row heights + background fills
-// Text placed in leftmost cell of each "block", rest filled with color
 // ═══════════════════════════════════════════════════════════════════════
 
 function cweBuildCanvas(ss) {
-  // Get or create sheet
   var sheet = ss.getSheetByName('CWE App');
-  if (!sheet) {
-    sheet = ss.insertSheet('CWE App', 0);
-  }
+  if (!sheet) sheet = ss.insertSheet('CWE App', 0);
 
-  // Break all existing merges before clearing — prevents stale merge conflicts
   try {
     var mergedRanges = sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns()).getMergedRanges();
     mergedRanges.forEach(function(r) { try { r.breakApart(); } catch(e) {} });
   } catch(e) { Logger.log('unmerge: ' + e.message); }
 
-  // Clear everything safely
   sheet.clearContents();
   sheet.clearNotes();
 
-  // Reset formats on the working area
   var area = sheet.getRange(1, 1, 40, 25);
   area.setBackground(C.BG);
   area.setFontColor(C.TEXT);
@@ -197,13 +228,12 @@ function cweBuildCanvas(ss) {
   sheet.setFrozenRows(0);
 
   // ── Column widths ────────────────────────────────────────────────────
-  // A=margin, B=tile1, C=gap, D=tile2, E=gap, F=tile3, G=gap, H=tile4, I+=overflow
   var colW = [14, 188, 14, 188, 14, 188, 14, 188, 14, 188, 14, 188, 14, 60, 60, 60, 60, 60, 60, 60];
   colW.forEach(function(w, i) { sheet.setColumnWidth(i + 1, w); });
 
   // ── Row heights ──────────────────────────────────────────────────────
   var rowH = [
-    0,   // placeholder (1-indexed below)
+    0,   // placeholder
     50,  // 1  top bar
     14,  // 2  spacer
     46,  // 3  hero title
@@ -211,30 +241,30 @@ function cweBuildCanvas(ss) {
     14,  // 5  spacer
     18,  // 6  section label: metrics
     6,   // 7  card top pad
-    44,  // 8  metric value — tall enough for 28pt font
+    44,  // 8  metric value
     22,  // 9  metric label
     6,   // 10 card bot pad
     14,  // 11 spacer
-    14,  // 12 spacer
-    4,   // 13 action area top
-    30,  // 14 action area
-    30,  // 15 action area
-    30,  // 16 action area
-    4,   // 17 action area bottom
+    6,   // 12 action card top pad
+    44,  // 13 action card icon + title
+    20,  // 14 action card subtitle
+    6,   // 15 action card bot pad
+    14,  // 16 spacer
+    14,  // 17 spacer
     14,  // 18 spacer
     18,  // 19 section label: resources
     6,   // 20 card top pad
     26,  // 21 resource title
     20,  // 22 resource link
     6,   // 23 card bot pad
-    14,  // 24 spacer (between resource rows)
+    14,  // 24 spacer
     6,   // 25 card top pad row2
     26,  // 26 resource title row2
     20,  // 27 resource link row2
     6,   // 28 card bot pad row2
     14,  // 29 spacer
     18,  // 30 section label: stages
-    28,  // 31 stage row — all 7 badges
+    28,  // 31 stage badges
     24,  // 32 stage counts
     14,  // 33 spacer
     20,  // 34 footer
@@ -246,7 +276,7 @@ function cweBuildCanvas(ss) {
   // ════════════════════════════════════════════════════════════════════
   // ROW 1 — TOP BAR
   // ════════════════════════════════════════════════════════════════════
-  cweRow(sheet, 1, 1, 25, C.SURFACE, null);
+  cweRow(sheet, 1, 1, 25, C.SURFACE);
   cweBorder(sheet, 1, 1, 1, 25, 'bottom', C.BORDER);
   cweCell(sheet, 1, 2, '⚡  CWE V2.5', 13, 'bold', C.ACCENT, C.SURFACE, 'left');
   cweCell(sheet, 1, 7, 'CLAIMS WORKFLOW ENGINE', 11, 'bold', C.TEXT, C.SURFACE, 'left');
@@ -273,50 +303,105 @@ function cweBuildCanvas(ss) {
   // ── Metric tiles (rows 7-10) ─────────────────────────────────────────
   var metrics = cweGetMetrics(ss);
   var mTiles = [
-    { col: 2, val: metrics.totalOpen,                    lbl: 'OPEN CLAIMS',     color: C.ACCENT },
-    { col: 4, val: metrics.criticalHigh,                 lbl: 'CRITICAL / HIGH', color: C.DANGER },
-    { col: 6, val: metrics.escalatedCount,               lbl: 'ESCALATED',       color: C.WARN   },
-    { col: 8, val: '$' + cweFmt(metrics.totalVariance),  lbl: 'OPEN EXPOSURE',   color: C.GREEN  },
+    { col: 2, val: metrics.totalOpen,                   lbl: 'OPEN CLAIMS',     color: C.ACCENT },
+    { col: 4, val: metrics.criticalHigh,                lbl: 'CRITICAL / HIGH', color: C.DANGER },
+    { col: 6, val: metrics.escalatedCount,              lbl: 'ESCALATED',       color: C.WARN   },
+    { col: 8, val: '$' + cweFmt(metrics.totalVariance), lbl: 'OPEN EXPOSURE',   color: C.GREEN  },
   ];
-  Logger.log('Metric values: open=' + metrics.totalOpen + ' critical=' + metrics.criticalHigh + ' escalated=' + metrics.escalatedCount + ' variance=' + metrics.totalVariance);
   mTiles.forEach(function(t) {
-    // Paint card background rows 7-10
     var cardRange = sheet.getRange(7, t.col, 4, 1);
     cardRange.setBackground(C.SURFACE);
     cardRange.setBorder(true, true, true, true, false, false, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
-    // Value cell
     var valCell = sheet.getRange(8, t.col);
-    valCell.setValue(t.val);
-    valCell.setNumberFormat('@');
-    valCell.setFontSize(26);
-    valCell.setFontWeight('bold');
-    valCell.setFontColor(t.color);
-    valCell.setBackground(C.SURFACE);
-    valCell.setHorizontalAlignment('center');
-    valCell.setVerticalAlignment('middle');
-    valCell.setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
-    // Label cell
+    valCell.setValue(t.val).setNumberFormat('@').setFontSize(26).setFontWeight('bold')
+      .setFontColor(t.color).setBackground(C.SURFACE)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle')
+      .setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
     var lblCell = sheet.getRange(9, t.col);
-    lblCell.setValue(t.lbl);
-    lblCell.setFontSize(9);
-    lblCell.setFontWeight('bold');
-    lblCell.setFontColor(C.TEXT);
-    lblCell.setBackground(C.SURFACE);
-    lblCell.setHorizontalAlignment('center');
-    lblCell.setVerticalAlignment('top');
-    lblCell.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    lblCell.setValue(t.lbl).setFontSize(9).setFontWeight('bold')
+      .setFontColor(C.TEXT).setBackground(C.SURFACE)
+      .setHorizontalAlignment('center').setVerticalAlignment('top')
+      .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
   });
   SpreadsheetApp.flush();
 
-  // Action button drawings float above rows 12-17 — no background needed
+  // ════════════════════════════════════════════════════════════════════
+  // ROWS 12-15 — ACTION ZONE CARDS
+  // These are styled cell cards. Transparent drawings go on top of each.
+  // Open Dashboard (col B, ACCENT border)
+  // Log New Issue  (col F, GREEN border)
+  // Training Center (col J, PURPLE border)
+  // ════════════════════════════════════════════════════════════════════
+  var actionCards = [
+    {
+      col:      2,
+      icon:     '📊',
+      title:    'Open Dashboard',
+      subtitle: 'Queue · Metrics · Filters',
+      border:   C.ACCENT,
+      color:    C.ACCENT,
+    },
+    {
+      col:      6,
+      icon:     '+',
+      title:    'Log New Issue',
+      subtitle: 'Denial · Rejection · Payment',
+      border:   C.GREEN,
+      color:    C.GREEN,
+    },
+    {
+      col:      10,
+      icon:     '🎓',
+      title:    'Training Center',
+      subtitle: 'Scenarios · Quiz · Reference',
+      border:   C.PURPLE,
+      color:    C.PURPLE,
+    },
+  ];
+
+  actionCards.forEach(function(card) {
+    // Card background rows 12-15
+    var cardBg = sheet.getRange(12, card.col, 4, 1);
+    cardBg.setBackground(C.SURFACE2);
+    cardBg.setBorder(true, true, true, true, false, false, card.border, SpreadsheetApp.BorderStyle.SOLID);
+
+    // Icon row (row 12) — large, centered
+    sheet.getRange(12, card.col)
+      .setValue(card.icon)
+      .setFontSize(20)
+      .setFontWeight('bold')
+      .setFontColor(card.color)
+      .setBackground(C.SURFACE2)
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+
+    // Title row (row 13)
+    sheet.getRange(13, card.col)
+      .setValue(card.title)
+      .setFontSize(11)
+      .setFontWeight('bold')
+      .setFontColor(card.color)
+      .setBackground(C.SURFACE2)
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+
+    // Subtitle row (row 14)
+    sheet.getRange(14, card.col)
+      .setValue(card.subtitle)
+      .setFontSize(9)
+      .setFontWeight('normal')
+      .setFontColor(C.MUTED)
+      .setBackground(C.SURFACE2)
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+  });
 
   // ════════════════════════════════════════════════════════════════════
   // ROW 19 — RESOURCES LABEL
   // ════════════════════════════════════════════════════════════════════
   cweCell(sheet, 19, 2, 'QUICK REFERENCES', 9, 'bold', C.MUTED, C.BG, 'left');
 
-  // ── Resource cards (rows 20-23) ──────────────────────────────────────
-  // External cards — real hyperlinks
+  // ── External cards (rows 20-23) ──────────────────────────────────────
   var extCards = [
     { row: 20, col: 6,  icon: '🏥', title: 'CMS Coverage DB',
       url: 'https://www.cms.gov/medicare-coverage-database/' },
@@ -335,12 +420,14 @@ function cweBuildCanvas(ss) {
       .setVerticalAlignment('top').setHorizontalAlignment('left');
   });
 
-  // Internal cards — open REF sheets via assigned drawing buttons
+  // ── Internal ref cards ───────────────────────────────────────────────
+  // Row 1: CARC at col B (rows 20-23)
+  // Row 2: MACs col B, MassHealth col F, GlobalPeriods col J (rows 25-28)
   var intCards = [
-    { row: 20, col: 2,  icon: '📋', title: 'CARC Reference',        fn: 'openRefCARC'         },
-    { row: 24, col: 2,  icon: '🗺️', title: 'MAC Jurisdiction Map',  fn: 'openRefMACs'         },
-    { row: 24, col: 6,  icon: '🏛️', title: 'MassHealth Carrier Codes', fn: 'openRefMassHealth' },
-    { row: 24, col: 10, icon: '📅', title: 'Global Period Reference', fn: 'openRefGlobalPeriods' },
+    { row: 20, col: 2,  icon: '📋', title: 'CARC Reference'           },
+    { row: 25, col: 2,  icon: '🗺️', title: 'MAC Jurisdiction Map'    },
+    { row: 25, col: 6,  icon: '🏛️', title: 'MassHealth Carrier Codes' },
+    { row: 25, col: 10, icon: '📅', title: 'Global Period Reference'  },
   ];
   intCards.forEach(function(r) {
     cweBlock(sheet, r.row, r.col, 4, 1, C.SURFACE, C.BORDER);
@@ -349,56 +436,48 @@ function cweBuildCanvas(ss) {
   });
 
   // ════════════════════════════════════════════════════════════════════
-  // ROW 25 — STAGES LABEL
+  // ROW 30 — STAGES LABEL
   // ════════════════════════════════════════════════════════════════════
   cweCell(sheet, 30, 2, 'WORKFLOW STAGES', 9, 'bold', C.MUTED, C.BG, 'left');
 
-  // ── Stage badges row 31, counts row 32 ──────────────────────────────────
+  // ── Stage badges row 31, counts row 32 ──────────────────────────────
   var stageCounts = metrics.byStageCounts || {};
-  // Stage labels must match raw values stored in the Claims sheet
-  // aliases[] handles alternate spellings in the data
   var stages = [
-    { lbl: 'NEW',          bg: '#1a3a5c', color: C.ACCENT, aliases: ['NEW']                               },
-    { lbl: 'WORKING',      bg: '#0f3320', color: C.GREEN,  aliases: ['WORKING','IN PROGRESS','In Progress']},
-    { lbl: 'PENDING INFO', bg: '#3d2b00', color: C.WARN,   aliases: ['PENDING INFO','PENDING']             },
-    { lbl: 'APPEALED',     bg: '#2a1f5e', color: C.PURPLE, aliases: ['APPEALED']                           },
-    { lbl: 'ESCALATED',    bg: '#4a1515', color: C.DANGER, aliases: ['ESCALATED','CONTRACT PULLED','Contract Pulled','CONTRACT_PULLED'] },
-    { lbl: 'RESOLVED',     bg: '#0d2818', color: C.GREEN,  aliases: ['RESOLVED']                           },
-    { lbl: 'CLOSED',       bg: '#1c1c1c', color: C.MUTED,  aliases: ['CLOSED']                             },
+    { lbl: 'NEW',          bg: '#1a3a5c', color: C.ACCENT, aliases: ['NEW']                                                             },
+    { lbl: 'WORKING',      bg: '#0f3320', color: C.GREEN,  aliases: ['WORKING','IN PROGRESS','In Progress']                             },
+    { lbl: 'PENDING INFO', bg: '#3d2b00', color: C.WARN,   aliases: ['PENDING INFO','PENDING']                                          },
+    { lbl: 'APPEALED',     bg: '#2a1f5e', color: C.PURPLE, aliases: ['APPEALED']                                                        },
+    { lbl: 'ESCALATED',    bg: '#4a1515', color: C.DANGER, aliases: ['ESCALATED','CONTRACT PULLED','Contract Pulled','CONTRACT_PULLED']  },
+    { lbl: 'RESOLVED',     bg: '#0d2818', color: C.GREEN,  aliases: ['RESOLVED']                                                        },
+    { lbl: 'CLOSED',       bg: '#1c1c1c', color: C.MUTED,  aliases: ['CLOSED']                                                         },
   ];
-  // Build case-insensitive lookup of stage counts
   var stageCountsUpper = {};
   Object.keys(stageCounts).forEach(function(k) {
     stageCountsUpper[k.toUpperCase().trim()] = stageCounts[k];
   });
-  Logger.log('Stage counts: ' + JSON.stringify(stageCountsUpper));
 
   stages.forEach(function(s, i) {
-    var col = 2 + (i * 2); // cols 2,4,6,8,10,12,14
-    // Badge
+    var col = 2 + (i * 2);
     cweBlock(sheet, 31, col, 1, 1, s.bg, C.BORDER);
     cweCell(sheet, 31, col, s.lbl, 9, 'bold', s.color, s.bg, 'center');
-    // Sum counts across all aliases for this stage
     var count = 0;
     s.aliases.forEach(function(a) {
       count += (stageCounts[a] || stageCountsUpper[a.toUpperCase()] || 0);
     });
     sheet.getRange(32, col)
-      .setValue(count === 0 ? '—' : count)
-      .setNumberFormat('@')
-      .setFontSize(11)
-      .setFontWeight('bold')
+      .setValue(count === 0 ? '—' : count).setNumberFormat('@')
+      .setFontSize(11).setFontWeight('bold')
       .setFontColor(count > 0 ? s.color : C.MUTED)
       .setBackground(C.BG)
-      .setHorizontalAlignment('center')
-      .setVerticalAlignment('middle');
+      .setHorizontalAlignment('center').setVerticalAlignment('middle');
   });
 
   // ════════════════════════════════════════════════════════════════════
-  // ROW 29 — FOOTER
+  // ROW 34 — FOOTER
   // ════════════════════════════════════════════════════════════════════
   cweBorder(sheet, 34, 2, 1, 19, 'top', C.BORDER);
-  sheet.getRange(34, 4).setValue('CWE V2.5  ·  Use the Claims Engine menu to log issues and open the dashboard  ·  Admin Tools → Refresh Metrics to update')
+  sheet.getRange(34, 4)
+    .setValue('CWE V2.5  ·  Use the Claims Engine menu to log issues and open the dashboard  ·  Admin Tools → Refresh Metrics to update')
     .setFontSize(9).setFontColor(C.BORDER).setBackground(C.BG)
     .setHorizontalAlignment('left').setVerticalAlignment('middle')
     .setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
@@ -407,23 +486,17 @@ function cweBuildCanvas(ss) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// DRAWING HELPERS — no merging ever
+// DRAWING HELPERS
 // ═══════════════════════════════════════════════════════════════════════
 
-// Fill a single cell with text + formatting
 function cweCell(sheet, row, col, text, size, weight, color, bg, align) {
-  var cell = sheet.getRange(row, col);
-  cell.setValue(text)
-    .setFontSize(size)
-    .setFontWeight(weight)
-    .setFontColor(color)
-    .setBackground(bg)
-    .setHorizontalAlignment(align)
-    .setVerticalAlignment('middle')
+  sheet.getRange(row, col)
+    .setValue(text).setFontSize(size).setFontWeight(weight)
+    .setFontColor(color).setBackground(bg)
+    .setHorizontalAlignment(align).setVerticalAlignment('middle')
     .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
 }
 
-// Fill a rectangular block with background + border (no text, no merging)
 function cweBlock(sheet, row, col, numRows, numCols, bg, borderColor) {
   var range = sheet.getRange(row, col, numRows, numCols);
   range.setBackground(bg);
@@ -432,12 +505,10 @@ function cweBlock(sheet, row, col, numRows, numCols, bg, borderColor) {
   }
 }
 
-// Fill a full row with background
 function cweRow(sheet, row, col, numCols, bg) {
   sheet.getRange(row, col, 1, numCols).setBackground(bg);
 }
 
-// Add a single border to one side of a range
 function cweBorder(sheet, row, col, numRows, numCols, side, color) {
   var range = sheet.getRange(row, col, numRows, numCols);
   var top = side === 'top', bot = side === 'bottom', left = side === 'left', right = side === 'right';
@@ -469,48 +540,4 @@ function cweFmt(n) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
   if (n >= 1000)    return (n / 1000).toFixed(1) + 'K';
   return n.toFixed(0);
-}
-
-function cweSetChrome(ss) {
-  var name = ss.getName();
-  if (name.toLowerCase().indexOf('sheet') > -1 || name.toLowerCase().indexOf('untitled') > -1) {
-    ss.rename('Claims Workflow Engine V2.4');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// INTERNAL REFERENCE SHEET OPENERS
-// Assign these to drawing buttons or call from menu
-// ═══════════════════════════════════════════════════════════════════════
-
-function openRefCARC() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('REF-CARC');
-  if (!sheet) { SpreadsheetApp.getUi().alert('REF-CARC sheet not found.'); return; }
-  sheet.showSheet();
-  ss.setActiveSheet(sheet);
-}
-
-function openRefMACs() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('REF-MACs');
-  if (!sheet) { SpreadsheetApp.getUi().alert('REF-MACs sheet not found.'); return; }
-  sheet.showSheet();
-  ss.setActiveSheet(sheet);
-}
-
-function openRefMassHealth() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('REF-MassHealth');
-  if (!sheet) { SpreadsheetApp.getUi().alert('REF-MassHealth sheet not found.'); return; }
-  sheet.showSheet();
-  ss.setActiveSheet(sheet);
-}
-
-function openRefGlobalPeriods() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('REF-GlobalPeriods');
-  if (!sheet) { SpreadsheetApp.getUi().alert('REF-GlobalPeriods sheet not found.'); return; }
-  sheet.showSheet();
-  ss.setActiveSheet(sheet);
 }
