@@ -351,8 +351,13 @@
     var existing = <?= JSON.stringify(existing) ?>;
 
     if (editRow && existing.issueType) {
-      document.addEventListener('DOMContentLoaded', function() { prefillForm(); });
-      if (document.readyState === 'complete') { setTimeout(prefillForm, 500); }
+      window.onload = function() { setTimeout(prefillForm, 300); };
+      // Belt-and-suspenders: also fire after 800ms in case onload already passed
+      setTimeout(function() {
+        if (document.getElementById('formFields').style.display !== 'block') {
+          prefillForm();
+        }
+      }, 800);
     }
 
     function toggleRelatedAccounts() {
