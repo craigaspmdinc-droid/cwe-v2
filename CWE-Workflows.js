@@ -119,7 +119,10 @@ function logNewIssue(issue) {
     issue.denialCode ? (issue.denialCodeGroup || '') : '', // AG - CARC Group Code
     issue.coverageLevel || '',        // AH - Coverage Level
     issue.ptid || '',                 // AI - PTID
-    issue.relatedAccounts || ''       // AJ - Related Account Numbers
+    issue.relatedAccounts || '',      // AJ - Related Account Numbers
+    '',                               // AK - Resolution Action
+    '',                               // AL - Outcome
+    ''                                // AM - Resolution Notes
   ]);
 
   var daysFormula = '=IF(ISBLANK(S' + nextRow + '), INT(TODAY()-K' + nextRow + '), INT(S' + nextRow + '-K' + nextRow + '))';
@@ -316,13 +319,28 @@ function updateIssueField(row, field, value) {
   }
 }
 
-function resolveIssue(row) {
+function resolveIssue(row, resolutionData) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Claims');
   sheet.getRange(row, COL.DATE_RESOLVED + 1).setValue(new Date());
   sheet.getRange(row, COL.WORKFLOW_STAGE + 1).setValue('Resolved');
 
+  if (resolutionData) {
+    if (resolutionData.resolutionAction) {
+      sheet.getRange(row, COL.RESOLUTION_ACTION + 1).setValue(resolutionData.resolutionAction);
+    }
+    if (resolutionData.outcome) {
+      sheet.getRange(row, COL.OUTCOME + 1).setValue(resolutionData.outcome);
+    }
+    if (resolutionData.resolutionNotes) {
+      sheet.getRange(row, COL.RESOLUTION_NOTES + 1).setValue(resolutionData.resolutionNotes);
+    }
+  }
+
   var issueId = sheet.getRange(row, 1).getValue();
-  logActivity(issueId, '✅ Issue marked as RESOLVED', 'Resolved');
+  var actionNote = resolutionData && resolutionData.resolutionAction
+    ? '✅ Resolved — ' + resolutionData.resolutionAction + (resolutionData.outcome ? ' | ' + resolutionData.outcome : '')
+    : '✅ Issue marked as RESOLVED';
+  logActivity(issueId, actionNote, 'Resolved');
 }
 
 function logResearchAndAdvance(issueId, row, note) {
@@ -445,6 +463,9 @@ function getIssueData(row) {
     carcGroupCode:      data[COL.CARC_GROUP_CODE],
     denialDescription:  denialDescription,
     ptid:               data[COL.PTID],
-    relatedAccounts:    data[COL.RELATED_ACCOUNTS]
+    relatedAccounts:    data[COL.RELATED_ACCOUNTS],
+    resolutionAction:   data[COL.RESOLUTION_ACTION] || '',
+    outcome:            data[COL.OUTCOME] || '',
+    resolutionNotes:    data[COL.RESOLUTION_NOTES] || ''
   };
 }

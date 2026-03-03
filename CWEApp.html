@@ -516,6 +516,26 @@ function onViewingChange() {
   activeFilter = null;
   renderQueueForViewing();
   updateQueueLabel();
+  renderBreakdownsForViewing();
+}
+
+function renderBreakdownsForViewing() {
+  if (!dashboardData) return;
+  // When viewing another user, recompute stage/priority counts from their claims only
+  var queue = getQueueForViewing();
+  if (!viewingUser) {
+    // Back to self — show full dataset counts
+    renderBreakdown('stage-rows', dashboardData.byStageCounts || {}, STAGE_COLORS, null, 'stage');
+    renderBreakdown('pri-rows', dashboardData.byPriorityCounts || {}, PRI_COLORS, null, 'priority');
+    return;
+  }
+  var stageCounts = {}, priCounts = {};
+  queue.forEach(function(c) {
+    if (c.stage)    stageCounts[c.stage]    = (stageCounts[c.stage]    || 0) + 1;
+    if (c.priority) priCounts[c.priority]   = (priCounts[c.priority]   || 0) + 1;
+  });
+  renderBreakdown('stage-rows', stageCounts, STAGE_COLORS, null, 'stage');
+  renderBreakdown('pri-rows',   priCounts,   PRI_COLORS,   null, 'priority');
 }
 
 function updateQueueLabel() {
@@ -625,18 +645,14 @@ function applyFilter(type, value) {
   if (activeFilter && activeFilter.type === type && activeFilter.value === value) { clearFilter(); return; }
   activeFilter = { type: type, value: value };
   renderFilteredQueue();
-  if (dashboardData) {
-    renderBreakdown('stage-rows', dashboardData.byStageCounts || {}, STAGE_COLORS, null, 'stage');
-    renderBreakdown('pri-rows', dashboardData.byPriorityCounts || {}, PRI_COLORS, null, 'priority');
-  }
+  renderBreakdownsForViewing();
 }
 
 function clearFilter() {
   activeFilter = null;
   if (dashboardData) {
     renderQueueForViewing();
-    renderBreakdown('stage-rows', dashboardData.byStageCounts || {}, STAGE_COLORS, null, 'stage');
-    renderBreakdown('pri-rows', dashboardData.byPriorityCounts || {}, PRI_COLORS, null, 'priority');
+    renderBreakdownsForViewing();
   }
 }
 
@@ -852,11 +868,166 @@ function moveToStage(stage) {
 }
 
 function markResolved() {
-  if (!confirm('Mark this issue as resolved?')) return;
+  // Toggle inline resolution capture form
+  var existing = document.getElementById('resolution-capture');
+  if (existing) { existing.remove(); return; }
+
+  var container = document.getElementById('workflow-content') || document.body;
+  var form = document.createElement('div');
+  form.id = 'resolution-capture';
+  form.innerHTML = `
+    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.35);border-radius:10px;padding:16px;margin:12px 0;">
+      <div style="font-size:12px;font-weight:700;color:#10b981;letter-spacing:0.5px;margin-bottom:12px;">✅ ALMOST DONE — HOW WAS THIS RESOLVED?</div>
+
+      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">What fixed it?</label>
+      <select id="res-action" style="width:100%;padding:8px;background:var(--surface);border:1.5px solid var(--border,#333);border-radius:7px;color:var(--text);font-size:12px;margin-bottom:10px;">
+        <option value="">Select action taken...</option>
+        <option>Resubmitted with corrections</option>
+        <option>Appeal approved</option>
+        <option>Corrected code / modifier</option>
+        <option>Authorization obtained</option>
+        <option>Patient info corrected</option>
+        <option>Retro authorization</option>
+        <option>Contacted payer directly</option>
+        <option>Written off / patient responsibility</option>
+        <option>Duplicate — no action needed</option>
+        <option>Other</option>
+      </select>
+
+      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Outcome</label>
+      <select id="res-outcome" style="width:100%;padding:8px;background:var(--surface);border:1.5px solid var(--border,#333);border-radius:7px;color:var(--text);font-size:12px;margin-bottom:10px;">
+        <option value="">Select outcome...</option>
+        <option>Paid</option>
+        <option>Pending payment</option>
+        <option>Written off</option>
+        <option>Patient responsibility</option>
+      </select>
+
+      <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Resolution notes <span style="font-weight:400;">(for billing system comments)</span></label>
+      <textarea id="res-notes" placeholder="Describe what happened and how it was resolved..." style="width:100%;padding:8px;background:var(--surface);border:1.5px solid var(--border,#333);border-radius:7px;color:var(--text);font-size:12px;min-height:70px;resize:vertical;box-sizing:border-box;" oninput="updateCharCount()"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;margin-bottom:10px;">
+        <span id="char-count" style="font-size:10px;color:var(--muted);">0 / 600</span>
+        <button onclick="polishWithAI()" id="polish-btn" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#818cf8;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">✨ Polish with AI</button>
+      </div>
+      <div id="ai-status" style="display:none;font-size:11px;color:#818cf8;margin-bottom:8px;"></div>
+
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button onclick="confirmResolve()" style="flex:1;background:#10b981;border:none;color:white;padding:9px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✅ Confirm &amp; Resolve</button>
+        <button onclick="document.getElementById('resolution-capture').remove()" style="background:var(--surface);border:1px solid var(--border,#333);color:var(--muted);padding:9px 14px;border-radius:7px;font-size:12px;cursor:pointer;">Cancel</button>
+      </div>
+    </div>`;
+
+  // Insert at top of workflow-content
+  if (container.firstChild) {
+    container.insertBefore(form, container.firstChild);
+  } else {
+    container.appendChild(form);
+  }
+  form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function updateCharCount() {
+  var ta = document.getElementById('res-notes');
+  var count = ta ? ta.value.length : 0;
+  var el = document.getElementById('char-count');
+  if (!el) return;
+  el.textContent = count + ' / 600';
+  el.style.color = count > 600 ? '#ef4444' : count > 500 ? '#f59e0b' : 'var(--muted)';
+}
+
+function polishWithAI() {
+  var notes   = (document.getElementById('res-notes').value || '').trim();
+  var action  = document.getElementById('res-action').value;
+  var outcome = document.getElementById('res-outcome').value;
+  var statusEl = document.getElementById('ai-status');
+  var btn      = document.getElementById('polish-btn');
+
+  if (!notes && !action) {
+    statusEl.style.display = 'block';
+    statusEl.textContent = '⚠️ Enter some notes or select an action first.';
+    return;
+  }
+
+  btn.textContent = '⏳ Polishing...';
+  btn.disabled = true;
+  statusEl.style.display = 'block';
+  statusEl.style.color = '#818cf8';
+  statusEl.textContent = 'AI is writing your comment...';
+
+  var issue = currentIssue || {};
+  var contextLines = [
+    issue.issueType       ? 'Issue type: '      + issue.issueType       : '',
+    issue.payerName       ? 'Payer: '            + issue.payerName       : '',
+    issue.carcCode        ? 'CARC code: '        + issue.carcCode        : '',
+    issue.carcDescription ? 'Denial reason: '   + issue.carcDescription  : '',
+    issue.denialCategory  ? 'Category: '        + issue.denialCategory   : '',
+    issue.cpt             ? 'CPT: '             + issue.cpt              : '',
+    issue.dos             ? 'DOS: '             + issue.dos              : '',
+    action                ? 'Action taken: '    + action                 : '',
+    outcome               ? 'Outcome: '         + outcome                : '',
+    notes                 ? 'Biller notes: '    + notes                  : ''
+  ].filter(Boolean).join('\n');
+
+  var prompt = 'You are a medical billing specialist writing a concise, professional comment for a billing system comments field.\n\nClaim context:\n' + contextLines + '\n\nWrite a clear, professional resolution comment that:\n- Summarizes the issue and resolution in plain language\n- Uses proper medical billing terminology\n- Is factual and audit-trail appropriate\n- Is a single flowing note (no bullet points)\n- Is under 600 characters total\n\nReturn ONLY the comment text. No preamble, no quotes.';
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var text = data.content && data.content[0] && data.content[0].text
+      ? data.content[0].text.trim() : '';
+    if (text) {
+      document.getElementById('res-notes').value = text;
+      updateCharCount();
+      statusEl.textContent = '✨ Polished! Review and edit as needed.';
+      statusEl.style.color = '#10b981';
+      btn.textContent = '✨ Re-polish';
+    } else {
+      statusEl.textContent = '⚠️ Unexpected AI response. Try again.';
+    }
+    btn.disabled = false;
+  })
+  .catch(function() {
+    statusEl.textContent = '⚠️ Could not reach AI. Check connection.';
+    btn.textContent = '✨ Polish with AI';
+    btn.disabled = false;
+  });
+}
+
+function confirmResolve() {
+  var action  = document.getElementById('res-action').value;
+  var outcome = document.getElementById('res-outcome').value;
+  var notes   = (document.getElementById('res-notes').value || '').trim();
+  var statusEl = document.getElementById('ai-status');
+
+  if (!action) {
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#ef4444';
+    statusEl.textContent = '⚠️ Please select what fixed it before resolving.';
+    return;
+  }
+  if (notes.length > 600) {
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#ef4444';
+    statusEl.textContent = '⚠️ Notes exceed 600 characters. Shorten or re-polish.';
+    return;
+  }
+
   google.script.run
-    .withSuccessHandler(function(){ showDashboard(); doRefresh(); })
-    .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
-    .resolveIssue(currentIssueRow);
+    .withSuccessHandler(function() { showDashboard(); doRefresh(); })
+    .withFailureHandler(function(e) { showWfMsg('Error: ' + e.message, 'danger'); })
+    .resolveIssue(currentIssueRow, {
+      resolutionAction: action,
+      outcome:          outcome,
+      resolutionNotes:  notes
+    });
 }
 
 function doReassign() {

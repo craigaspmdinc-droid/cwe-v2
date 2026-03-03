@@ -6,19 +6,12 @@
  * ╚═══════════════════════════════════════════════════════════════════════╝
  */
 
-// ═══════════════════════════════════════════════════════════════════════
-// CONFIGURATION - USERS & PERMISSIONS
-// ═══════════════════════════════════════════════════════════════════════
-
 var USERS = {
-  // ASP Team (Admin level)
   'craig.aspmdinc@gmail.com': { name: 'Craig', group: 'ASP', level: 'Admin' },
   'chris@asp.com':            { name: 'Chris', group: 'ASP', level: 'Admin' },
   'nate@asp.com':             { name: 'Nate',  group: 'ASP', level: 'Admin' },
   'peter@asp.com':            { name: 'Peter', group: 'ASP', level: 'Admin' },
   'kara@asp.com':             { name: 'Kara',  group: 'ASP', level: 'Admin' },
-
-  // A3MB Team (Analyst level)
   'piaancheta@gmail.com':       { name: 'Pia',    group: 'A3MB', level: 'Analyst' },
   'dbelle.a3@gmail.com':        { name: 'Belle',  group: 'A3MB', level: 'Analyst' },
   'gemian.a3@gmail.com':        { name: 'Angel',  group: 'A3MB', level: 'Analyst' },
@@ -28,15 +21,13 @@ var USERS = {
   'yvettea.a3@gmail.com':       { name: 'Yvette', group: 'A3MB', level: 'Analyst' },
   'minniey.a3@gmail.com':       { name: 'Minnie', group: 'A3MB', level: 'Analyst' },
   'shevila.a3@gmail.com':       { name: 'Sheila', group: 'A3MB', level: 'Analyst' },
-
-  // Accudoc Team (Analyst level)
   'yazeen4ever@gmail.com':    { name: 'Yaseen',  group: 'Accudoc', level: 'Analyst' },
   'impraveen.7@gmail.com':    { name: 'Praveen', group: 'Accudoc', level: 'Analyst' },
   'anithamaria1311@gmail.com':{ name: 'Anitha',  group: 'Accudoc', level: 'Analyst' },
   'vijaympfernandez@gmail.com':{ name: 'Vijay',  group: 'Accudoc', level: 'Analyst' }
 };
 
-// ── Column index constants (zero-based, matches getRange data arrays) ──
+// ── Column index constants (zero-based) ──────────────────────────────
 var COL = {
   ISSUE_ID:          0,   // A
   DATE_LOGGED:       1,   // B
@@ -58,7 +49,7 @@ var COL = {
   ASSIGNED_TO:       17,  // R
   DATE_RESOLVED:     18,  // S
   DAYS_OPEN:         19,  // T
-  ISSUE_DETAILS:     20,  // U  (also CARC code for denials)
+  ISSUE_DETAILS:     20,  // U
   BATCH_ID:          21,  // V
   STATE:             22,  // W
   ACCOUNT_NUMBER:    23,  // X
@@ -71,8 +62,13 @@ var COL = {
   RARC_CODE:         30,  // AE
   RARC_DESCRIPTION:  31,  // AF
   CARC_GROUP_CODE:   32,  // AG
-  COVERAGE_LEVEL:    33,  // AH  ← NEW: Primary / Secondary / Tertiary
-  TOTAL_COLS:        34   // Always fetch at least this many columns
+  COVERAGE_LEVEL:    33,  // AH
+  PTID:              34,  // AI  ← Patient ID from PM
+  RELATED_ACCOUNTS:  35,  // AJ  ← Comma-separated related account numbers
+  RESOLUTION_ACTION: 36,  // AK  ← What fixed it
+  OUTCOME:           37,  // AL  ← Paid / Written Off / Pending
+  RESOLUTION_NOTES:  38,  // AM  ← AI-polished resolution comment (≤600 chars)
+  TOTAL_COLS:        39
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -86,28 +82,17 @@ function getCurrentUser() {
 
 function getVisibleUsers(user) {
   var visible = [];
-
   if (user.level === 'Admin') {
-    for (var email in USERS) {
-      visible.push(USERS[email].name);
-    }
+    for (var email in USERS) { visible.push(USERS[email].name); }
   } else {
     visible.push('Craig');
-
     for (var email in USERS) {
       var u = USERS[email];
-      if (u.group === user.group) {
-        visible.push(u.name);
-      }
+      if (u.group === user.group) { visible.push(u.name); }
     }
-
-    if (user.group === 'A3MB') {
-      visible.push('Accudoc');
-    } else if (user.group === 'Accudoc') {
-      visible.push('A3MB');
-    }
+    if (user.group === 'A3MB') { visible.push('Accudoc'); }
+    else if (user.group === 'Accudoc') { visible.push('A3MB'); }
   }
-
   return visible.sort();
 }
 
@@ -116,15 +101,18 @@ function canViewClaim(claim, user) {
   if (claim.assignedTo === user.name) return true;
   if (claim.assignedTo === user.group) return true;
   if (!claim.assignedTo || claim.assignedTo === '') return true;
-
   for (var email in USERS) {
     var u = USERS[email];
-    if (u.group === user.group && u.name === claim.assignedTo) {
-      return true;
-    }
+    if (u.group === user.group && u.name === claim.assignedTo) return true;
   }
-
   return false;
+}
+
+// Returns all team member names for the supervisor "Viewing as" dropdown
+function getTeamMemberNames() {
+  var names = [];
+  for (var email in USERS) { names.push(USERS[email].name); }
+  return names.sort();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
