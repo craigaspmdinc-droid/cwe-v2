@@ -1,339 +1,237 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════╗
  * ║              CLAIMS WORKFLOW ENGINE V2.5                              ║
- * ║                       CWE-Docs.gs                                     ║
- * ║  PURPOSE: Master reference — file structure, all functions,           ║
- * ║           sheet schema, menu map, change log, debug reference         ║
- * ║  NOTE:    No executable code — documentation only                     ║
- * ║  UPDATED: March 2026                                                  ║
+ * ║                       CWE-Docs.gs                                    ║
+ * ║  PURPOSE: Human-readable codebase reference. No executable code.     ║
+ * ║           Update this file at the end of every development session.  ║
+ * ║  Last Updated: 2026-03-03                                            ║
  * ╚═══════════════════════════════════════════════════════════════════════╝
  *
- * This file is the single source of truth for the CWE project.
- * Share ONLY this file with Claude at the start of any new session.
- * Then upload only the specific .gs files being changed that session.
- * TESTING GS CODE SYNC
- *
  * ═══════════════════════════════════════════════════════════════════════
- * APPS SCRIPT FILES
+ * SECTION 1 — FILE OVERVIEW
  * ═══════════════════════════════════════════════════════════════════════
  *
- *  CWE-Docs.gs           THIS FILE. No code, docs only. Update every session.
- *  CWE-Main.gs           Users, permissions, COL constants, menu, onOpen()
- *  CWE-AppView.gs        Canvas sheet, live metrics, ref sheet openers  [V2.4+]
- *  CWE-Dashboard.gs      getDashboardData(), sidebar builders, HTML generators
- *  CWE-Reference.gs      All REF sheet lookups (read-only)
- *  CWE-Workflows.gs      Claim writing, stage transitions, activity logging
- *  CWE-Forms.gs          Intake form, sidebar launcher, workflow UI builders
- *  CWE-Setup.gs          Sheet creation, column formatting, legacy dashboard
- *  CWE-CARC-Workflows.gs 297 CARC decision trees (binary yes/no steps)
- *  CWE-Debug.gs          Diagnostic functions only, never user-facing
+ * CWE-Main.gs
+ *   COL constants (zero-based column index map for Claims sheet)
+ *   USERS map (email -> { name, group, level })
+ *   Permission functions: getCurrentUser, getVisibleUsers, canViewClaim
+ *   onOpen menu builder
  *
+ * CWE-Workflows.gs
+ *   Claim CRUD: logNewIssue, updateIssue, updateIssueField
+ *   Resolution: resolveIssue (accepts resolutionData object since V2.5)
+ *   Activity logging: logActivity, logActivityFromSidebar, logResearchAndAdvance
+ *   Priority + root cause: calculatePriority, determineRootCause
+ *   AI polish: polishResolutionNote (server-side Anthropic API via UrlFetchApp)
+ *   Data reader: getIssueData
+ *   Alerts: checkProgrammingAlert
  *
- * ═══════════════════════════════════════════════════════════════════════
- * HTML FILES
- * ═══════════════════════════════════════════════════════════════════════
+ * CWE-Dashboard.gs
+ *   getDashboardData - builds full dashboard payload for CWEApp.html
+ *   getWorkflowData - builds workflow payload for sidebar
+ *   openDashboardSidebar - launches CWEApp.html as sidebar
+ *   buildPayerInfoDark, buildMACInfoDark, buildWorkflowHTMLDark
  *
- *  CWEApp.html           Unified sidebar shell. Loads Dashboard by default.
- *                        Tab navigation, queue list, claim detail view.
- *  CWE_V2_Training.html  Training center. Modal dialog 1100x700.
- *                        Scenarios, quiz, CARC/RARC quick reference.
- *  IntakeForm.html       New issue / edit issue form. Modal dialog.
- *                        CARC field first — denial category auto-fills.
+ * CWE-Forms.gs
+ *   showNewIssueForm - opens IntakeForm.html in new mode
+ *   showEditIssueForm - opens IntakeForm.html in edit mode with prefill data
+ *   openWorkflowSidebarByRow - calls openDashboardSidebar()
+ *   buildClaimOptions, buildUserOptions, buildPayerInfo, buildMACInfo
+ *   Workflow builders (one per denial type):
+ *     buildRootCauseWorkflow, buildResearchWorkflow, buildPatientContactWorkflow,
+ *     buildProviderContactWorkflow, buildResubmitWorkflow, buildAppealWorkflow,
+ *     buildDuplicateWorkflow, buildSendInfoWorkflow, buildDisputeWorkflow,
+ *     buildPatientRespWorkflow, buildMassHealthWorkflow, buildCredentialingWorkflow,
+ *     buildProgrammingWorkflow, buildGenericWorkflow
+ *   buildProgressBar, getTypeColor, getCARCAction
  *
- *
- * ═══════════════════════════════════════════════════════════════════════
- * SPREADSHEET SHEETS
- * ═══════════════════════════════════════════════════════════════════════
- *
- *  CWE App               Interactive canvas (built by CWE-AppView.gs)
- *  Claims                Main data. One row per claim.
- *  Activity Log          Append-only log of all actions.
- *  Programming Alerts    Payer-level billing alerts shown in sidebar.
- *  REF-Practices         A:Code  B:Name  C:State  D:NPI
- *  REF-Providers         A:Practice ID  B:Provider Name  C:NPI
- *  REF-Payers            A:Name  B:State  C:Coverage Type
- *                        D:Timely Filing Days  E-H:Appeal levels+days
- *  REF-Denials           A:Category  B:Description  C:Suggested Action
- *  REF-CARC              A:Code  B:Description  C:Group Code  E:Action
- *                        NOTE: Column E required for action banner in sidebar
- *  REF-RARC              A:Code  B:Description
- *  REF-MACs              A:State  B:Billing Type  C:MAC Name  D:Phone  E:Jurisdiction
- *                        NOTE: State must use abbreviation (MA not Massachusetts)
- *  REF-GlobalPeriods     CPT global period reference data
- *  REF-MassHealth        MassHealth carrier codes reference
- *
+ * CWE-Docs.gs (this file)
+ *   Comment-only reference. No executable code. Update each session.
  *
  * ═══════════════════════════════════════════════════════════════════════
- * CLAIMS SHEET COLUMNS (COL constants in CWE-Main.gs, 0-indexed)
+ * SECTION 2 — HTML TEMPLATES
  * ═══════════════════════════════════════════════════════════════════════
  *
- *  COL.ISSUE_ID          A  Unique ID (ISS-YYYYMMDD-N)
- *  COL.DATE_LOGGED       B  Date claim was logged
- *  COL.PRACTICE          C  Practice name
- *  COL.PROVIDER          D  Provider name
- *  COL.PATIENT           E  Patient name
- *  COL.DOS               F  Date of service
- *  COL.PAYER             G  Payer name
- *  COL.ISSUE_TYPE        H  Denial / Rejection / Payment Variance / etc.
- *  COL.DENIAL_CATEGORY   I  Denial category (from REF-Denials)
- *  COL.CARC              J  CARC code
- *  COL.RARC              K  RARC code
- *  COL.PRIORITY          L  Critical (Past Due) / High / Medium / Low
- *  COL.WORKFLOW_STAGE    M  NEW / WORKING / IN PROGRESS / CONTRACT PULLED /
- *                           PENDING INFO / APPEALED / ESCALATED / RESOLVED / CLOSED
- *  COL.ASSIGNED_TO       N  User name (must match USERS object exactly)
- *  COL.VARIANCE          O  Dollar variance amount
- *  COL.NOTES             P  Free text notes
- *  COL.DATE_RESOLVED     Q  Date resolved (set automatically on resolution)
+ * CWEApp.html
+ *   Main dashboard sidebar. Dark theme.
+ *   Sections: metrics cards, By Stage breakdown, By Priority breakdown,
+ *             claim queue, supervisor Viewing-as bar (Admin only)
+ *   Key JS functions:
+ *     renderDashboard(d) - populates all sections from getDashboardData()
+ *     renderQueueForViewing() - filters queue by viewingUser if set
+ *     renderBreakdownsForViewing() - recomputes stage/priority from filtered queue
+ *     renderMetricsForViewing() - recomputes top metrics cards from filtered queue
+ *     onViewingChange() - fires when supervisor switches Viewing-as dropdown
+ *     showWorkflow(row) - loads workflow view for a claim
+ *     markResolved() - expands inline resolution capture form (no modal)
+ *     polishWithAI() - calls google.script.run.polishResolutionNote()
+ *     confirmResolve() - validates and calls resolveIssue()
+ *     updateCharCount() - live 600-char counter for resolution notes
  *
+ * IntakeForm.html
+ *   New claim intake + edit form. Served as modal dialog.
+ *   Issue type buttons (Denial/Rejection/Payment/Internal) reveal relevant fields.
+ *   Edit mode: prefillForm() populates all fields from existing claim data.
+ *   CRITICAL: selectIssueType(type, el) - optional el param avoids
+ *     event.currentTarget crash when called programmatically.
+ *   ALL JS scriptlets use <?!= ?> never <?= ?> for JSON/JS data.
  *
- * ═══════════════════════════════════════════════════════════════════════
- * USER ACCESS LEVELS (USERS object in CWE-Main.gs)
- * ═══════════════════════════════════════════════════════════════════════
- *
- *  Admin      Full access. All claims, all sheets, Admin Tools menu.
- *  Supervisor Same as Admin for claim viewing. Gets Admin Tools. Badge: ASP
- *  Manager    All claims visible. No Admin Tools.
- *  Biller     Own practice claims only. No Admin Tools.
- *  Blocked    No access.
- *
+ * Sidebar.html - Sidebar container/launcher
+ * Dashboard.html - Standalone dashboard view
+ * CWERefViewer.html - Reference data viewer (CARC, RARC, payers, MACs)
+ * CWE_V2_Training.html - Biller training and onboarding guide
  *
  * ═══════════════════════════════════════════════════════════════════════
- * MENU STRUCTURE
+ * SECTION 3 — COLUMN MAP (Claims Sheet, Zero-Based)
  * ═══════════════════════════════════════════════════════════════════════
  *
- *  Claims Engine
- *    Log New Issue          showNewIssueForm()          CWE-Forms.gs
- *    Open Dashboard         openDashboardSidebar()      CWE-Dashboard.gs
- *    Training Center        openTrainingCenter()        CWE-AppView.gs
- *    View Activity Log      openActivityLog()           CWE-Workflows.gs
- *    References
- *      CARC Reference       openRefCARC()               CWE-AppView.gs
- *      MAC Jurisdiction Map openRefMACs()               CWE-AppView.gs
- *      MassHealth Carrier   openRefMassHealth()         CWE-AppView.gs
- *      Global Period Ref    openRefGlobalPeriods()      CWE-AppView.gs
- *    Admin Tools  [Admin/Supervisor only]
- *      Setup System         setupAllSheets()            CWE-Setup.gs
- *      Activate App View    setupAppView()              CWE-AppView.gs
- *      Refresh Metrics      refreshMetrics()            CWE-AppView.gs
- *      Rebuild Canvas       refreshCanvas()             CWE-AppView.gs
- *      Show All Sheets      showAllSheets()             CWE-AppView.gs
- *      Hide Data Sheets     hideDataSheets()            CWE-AppView.gs
- *      Import Reference Data showImportGuide()          CWE-Setup.gs
- *      Manage Users         showUserManagement()        CWE-Main.gs
- *      Programming Alerts   openProgrammingAlerts()     CWE-Workflows.gs
+ * COL.ISSUE_ID          = 0   (A)  Auto-generated ISS-YYYYMMDD-N
+ * COL.DATE_LOGGED       = 1   (B)  DATE - never store as string
+ * COL.LOGGED_BY         = 2   (C)
+ * COL.ISSUE_TYPE        = 3   (D)  Denial / Rejection / Payment / Internal
+ * COL.PRACTICE          = 4   (E)
+ * COL.PRACTICE_NPI      = 5   (F)
+ * COL.PROVIDER          = 6   (G)
+ * COL.PROVIDER_NPI      = 7   (H)
+ * COL.PAYER             = 8   (I)
+ * COL.CPT               = 9   (J)
+ * COL.DOS               = 10  (K)  DATE - serialize carefully
+ * COL.EXPECTED_AMT      = 11  (L)
+ * COL.PAID_AMT          = 12  (M)
+ * COL.VARIANCE          = 13  (N)  Computed: Paid - Expected
+ * COL.ROOT_CAUSE        = 14  (O)  Auto from CARC lookup
+ * COL.WORKFLOW_STAGE    = 15  (P)  New/In Progress/Research Complete/Escalated/Resolved
+ * COL.PRIORITY          = 16  (Q)  Critical (Past Due)/High (Urgent)/Medium/Low
+ * COL.ASSIGNED_TO       = 17  (R)
+ * COL.DATE_RESOLVED     = 18  (S)  DATE - set with new Date()
+ * COL.DAYS_OPEN         = 19  (T)  Sheet formula - do NOT overwrite
+ * COL.ISSUE_DETAILS     = 20  (U)  CARC code for denials
+ * COL.BATCH_ID          = 21  (V)
+ * COL.STATE             = 22  (W)  Used for payer lookup by state
+ * COL.ACCOUNT_NUMBER    = 23  (X)  Patient account # in billing system
+ * COL.DENIAL_CATEGORY   = 24  (Y)  Maps to REF-Denials sheet
+ * COL.DENIAL_DATE       = 25  (Z)  DATE
+ * COL.APPEAL_DUE        = 26  (AA) DATE - computed from denial date + payer window
+ * COL.RESUBMISSION_DATE = 27  (AB) DATE
+ * COL.COVERAGE_TYPE     = 28  (AC) e.g. Medicare Part B, Commercial
+ * COL.CARC_DESCRIPTION  = 29  (AD) Looked up from REF-CARC
+ * COL.RARC_CODE         = 30  (AE)
+ * COL.RARC_DESCRIPTION  = 31  (AF)
+ * COL.CARC_GROUP_CODE   = 32  (AG) CO / PR / OA / PI
+ * COL.COVERAGE_LEVEL    = 33  (AH) Primary / Secondary / Tertiary
+ * COL.PTID              = 34  (AI) Patient ID from PM system
+ * COL.RELATED_ACCOUNTS  = 35  (AJ) Comma-separated related account numbers
+ * COL.RESOLUTION_ACTION = 36  (AK) What fixed it - added V2.5
+ * COL.OUTCOME           = 37  (AL) Paid / Pending / Written Off - added V2.5
+ * COL.RESOLUTION_NOTES  = 38  (AM) AI-polished comment <=600 chars - added V2.5
+ * COL.TOTAL_COLS        = 39      Always = last column index + 1
  *
- *
- * ═══════════════════════════════════════════════════════════════════════
- * FUNCTION DIRECTORY
- * ═══════════════════════════════════════════════════════════════════════
- *
- *  CWE-Main.gs
- *    USERS {}             Email → { name, level, practices[] }. Add users here.
- *    COL {}               Column name → 0-based index. Edit if columns change.
- *    getCurrentUser()     Active email → { name, level, practices[], email }
- *    getVisibleUsers(u)   Users visible for reassignment based on level
- *    canViewClaim(c,u)    true/false — Billers blocked from other practices
- *    onOpen()             Builds menu. Simple trigger — no UI permissions.
- *
- *  CWE-AppView.gs
- *    setupAppView()       Hides sheets, builds canvas, sets chrome. Run once.
- *    refreshMetrics()     Updates 4 metric cells + stage counts + timestamp.
- *                         SAFE — preserves all drawings. Run routinely.
- *    refreshCanvas()      Full canvas rebuild. WIPES drawings. Use sparingly.
- *    openTrainingCenter() Opens CWE_V2_Training.html modal 1100x700
- *    showAllSheets()      Admin: unhide all sheets
- *    hideDataSheets()     Admin: hide everything except CWE App
- *    openRefCARC()        Shows REF-CARC sheet
- *    openRefMACs()        Shows REF-MACs sheet
- *    openRefMassHealth()  Shows REF-MassHealth sheet
- *    openRefGlobalPeriods() Shows REF-GlobalPeriods sheet
- *    cweBuildCanvas(ss)   Full canvas builder. No cell merging. 34 rows.
- *    cweGetMetrics(ss)    Calls getDashboardData(), returns metrics object
- *    cweFmt(n)            Number formatter: 1234→"1.2K", 1234567→"1.2M"
- *    cweCell/cweBlock/cweRow/cweBorder   Drawing primitives (no merging)
- *
- *  CWE-Dashboard.gs
- *    openDashboardSidebar()     Opens CWEApp.html sidebar (width 450)
- *    getDashboardData()         Reads Claims, returns metrics + queue
- *                               DASH_OPEN_STAGES: NEW, WORKING, ESCALATED,
- *                               APPEALED, PENDING, PENDING INFO,
- *                               IN PROGRESS, CONTRACT PULLED
- *                               criticalHigh: uses indexOf() for "Critical (Past Due)"
- *                               byStageCounts: raw cell value, case-sensitive
- *    getWorkflowData(row)       Full claim payload for sidebar click
- *    buildPayerInfoDark(issue)  HTML: payer details block
- *    buildMACInfoDark(issue)    HTML: MAC info for Medicare claims
- *    buildWorkflowHTMLDark(i,c) HTML: CARC decision tree steps
- *    dashboardLogNewIssue()     → showNewIssueForm() from sidebar
- *    dashboardOpenSidebarForRow(row)
- *    dashboardActivateClaimsSheet()
- *
- *  CWE-Reference.gs
- *    getPractices()             All practices from REF-Practices
- *    getProvidersByPractice(id) Providers by practice ID
- *    getPayersByState(state)    Payers by state abbreviation
- *    lookupCARC(code)           { description, groupCode, action }
- *    getCARCAction(code)        Action string only
- *    getMACsForState(state)     MAC entries for state
- *    getDenialCategories()      All REF-Denials rows
- *    getCARCMatches(carc)       Returns { denialCategory } for auto-fill
- *
- *  CWE-Workflows.gs
- *    saveIssue(data)            Write new or updated claim
- *    resolveIssue(row, data)    Mark resolved, set date
- *    moveToStage(stage)         Update WORKFLOW_STAGE
- *    logActivity(id, msg, type) Append to Activity Log
- *    openActivityLog()          Show Activity Log sheet
- *    openProgrammingAlerts()    Show Programming Alerts sheet
- *    getIssueData(row)          Full claim object for row
- *    getTypeColor(issueType)    Hex color for issue type badge
- *
- *  CWE-Forms.gs
- *    showNewIssueForm()         Open IntakeForm.html modal
- *    showEditIssueForm(row)     Open IntakeForm pre-filled
- *    buildClaimOptions(i,u)     HTML: action buttons for sidebar
- *    buildUserOptions(user)     HTML: reassign dropdown
- *    buildRootCauseWorkflow(i,c) Fallback workflow HTML
- *
- *  CWE-CARC-Workflows.gs
- *    buildWorkflowHTMLDark(issue, color)
- *      50 custom CARC decision trees + 14 pattern templates.
- *      Called by getWorkflowData() in CWE-Dashboard.gs.
- *
- *  CWE-Setup.gs
- *    setupAllSheets()           Create all sheets, apply formatting
- *    showImportGuide()          Modal: REF data import instructions
- *    showUserManagement()       Modal: add/edit users
- *
+ * DATE SERIALIZATION WARNING:
+ *   DOS, DATE_LOGGED, DATE_RESOLVED, DENIAL_DATE, APPEAL_DUE, RESUBMISSION_DATE
+ *   are Date objects. Always use new Date(value) when reading. Never assume string.
  *
  * ═══════════════════════════════════════════════════════════════════════
- * CANVAS LAYOUT — CWE App Sheet
+ * SECTION 4 — DATA FLOW
  * ═══════════════════════════════════════════════════════════════════════
  *
- *  Column widths: A=14px margin, B/D/F/H/J/L=188px tiles, C/E/G/I/K/M=14px gaps
+ * NEW CLAIM:
+ *   IntakeForm.html -> submitIssue() -> google.script.run.logNewIssue(issue)
+ *   -> CWE-Workflows:logNewIssue -> appends row to Claims -> logActivity
  *
- *  Row 1     Top bar: CWE V2.5 | CLAIMS WORKFLOW ENGINE | timestamp
- *  Row 3     Hero title (OVERFLOW)
- *  Row 4     Subtitle (OVERFLOW)
- *  Row 6     LIVE METRICS label
- *  Rows 7-10 Metric tiles — B:Open Claims, D:Critical/High, F:Escalated, H:Exposure
- *  Row 8     Values (font 26, OVERFLOW, hardcoded hex colors)
- *  Row 9     Labels (font 9, muted)
- *  Rows 13-17 ACTION ZONE — drawing buttons float here
- *  Row 19    QUICK REFERENCES label
- *  Rows 20-23 Cards row 1: B=CARC(internal), F=CMS Coverage(external), J=NCCI(external)
- *  Rows 25-28 Cards row 2: B=MACs(internal), F=MassHealth(internal), J=GlobalPeriods(internal)
- *  Row 30    WORKFLOW STAGES label
- *  Row 31    Stage badges: B=NEW, D=WORKING, F=PENDING INFO, H=APPEALED,
- *                          J=ESCALATED, L=RESOLVED, N=CLOSED
- *  Row 32    Live counts per stage
- *  Row 34    Footer (OVERFLOW)
+ * DASHBOARD LOAD:
+ *   CWEApp.html loads -> getDashboardData() -> reads Claims sheet
+ *   -> returns { queue[], counts, metrics, teamMembers }
+ *   -> renderDashboard() populates metrics, breakdowns, queue
  *
+ * WORKFLOW VIEW:
+ *   Biller clicks claim -> showWorkflow(row) -> getWorkflowData(row)
+ *   -> getIssueData + builds HTML -> renders in workflow panel
  *
- * ═══════════════════════════════════════════════════════════════════════
- * DESIGN SYSTEM — COLORS
- * ═══════════════════════════════════════════════════════════════════════
+ * RESOLVE CLAIM (V2.5):
+ *   Mark Resolved -> inline form expands ->
+ *   optionally Polish with AI -> polishResolutionNote(context)
+ *   -> UrlFetchApp calls Anthropic API -> returns polished comment ->
+ *   Confirm & Resolve -> resolveIssue(row, { resolutionAction, outcome, resolutionNotes })
+ *   -> writes AK/AL/AM, stage=Resolved, logs activity
  *
- *  BG:      #0d1117   SURFACE:  #161b22   SURFACE2: #21262d   BORDER: #30363d
- *  ACCENT:  #58a6ff   GREEN:    #3fb950   WARN:     #d29922   DANGER: #f85149
- *  PURPLE:  #a5a3ff   TEXT:     #e6edf3   MUTED:    #8b949e
+ * EDIT CLAIM:
+ *   Edit Claim Details -> editClaim() -> showEditIssueForm(row)
+ *   -> getIssueData -> passes existing to IntakeForm.html template
+ *   -> prefillForm() populates fields -> updateIssue() saves editable fields
  *
- *
- * ═══════════════════════════════════════════════════════════════════════
- * KNOWN ISSUES AND DECISIONS
- * ═══════════════════════════════════════════════════════════════════════
- *
- *  onSelectionChange trigger CANNOT call showSidebar() or showModalDialog().
- *    Use drawing buttons with assigned scripts for action tiles instead.
- *
- *  Cell merges cause rebuild errors.
- *    Zero merges anywhere in canvas. All layout uses OVERFLOW wrap strategy.
- *
- *  "In Progress" and "Contract Pulled" are valid stage values from CWE-Forms.gs.
- *    Both included in DASH_OPEN_STAGES as of V2.4.
- *    Stage aliases in refreshMetrics()/cweBuildCanvas() handle variants.
- *
- *  criticalHigh uses indexOf() not === to catch "Critical (Past Due)".
- *
- *  Installable triggers (onOpen, openDashboardSidebar) required for sidebar
- *    auto-open. DO NOT delete. Simple trigger onOpen() builds menu only.
- *
- *  refreshMetrics() SAFE — preserves drawings.
- *  refreshCanvas() / setupAppView() WIPE drawings — re-add after running.
- *
- *  Metric value colors hardcoded as hex in refreshMetrics() mTiles array.
- *    (C.COLOR references don't resolve reliably in installable trigger context)
- *
+ * SUPERVISOR VIEW:
+ *   Viewing-as dropdown -> onViewingChange() -> sets viewingUser
+ *   -> renderMetricsForViewing() + renderQueueForViewing()
+ *   + renderBreakdownsForViewing() all filter client-side from allQueue
+ *   No server call on view switch.
  *
  * ═══════════════════════════════════════════════════════════════════════
- * CHANGE LOG
+ * SECTION 5 — USER & PERMISSION MODEL
  * ═══════════════════════════════════════════════════════════════════════
  *
- *  V2.5  March 2026
- *    - B3/B4 hero text: OVERFLOW wrap (no merging)
- *    - Subtitle: "Multi-specialty outpatient billing" only
- *    - Internal ref cards: "📂 Open internal reference" label (no function name)
- *    - NCCI URL corrected: /national-correct-coding-initiative-ncci-edits
- *    - CWE-Docs.gs rewritten as full master reference (this file)
+ * Admin (ASP): Craig, Chris, Nate, Peter, Kara
+ *   See all claims + Viewing-as dropdown
  *
- *  V2.4  March 2026
- *    - CWE-AppView.gs created: single-screen interactive canvas
- *    - refreshMetrics() safe update, refreshCanvas() full rebuild
- *    - 6 resource cards (2 external, 4 internal)
- *    - Stage badges with live counts
- *    - References submenu in Claims Engine menu
- *    - DASH_OPEN_STAGES expanded, criticalHigh indexOf fix
+ * Analyst (A3MB): Pia, Belle, Angel, Ynna, Allen, Ella, Yvette, Minnie, Sheila
+ *   See own + Craig + Accudoc group
  *
- *  V2.3  Feb 2026
- *    - CWEApp.html unified sidebar
- *    - Date serialization fix in getDashboardData
- *
- *  V2.2  Feb 2026
- *    - CWE-CARC-Workflows.gs: 50 custom trees + 14 templates
- *    - IntakeForm: CARC first, denial auto-fill
- *    - REF-CARC: 297 codes with actions
- *
- *  V2.1  Jan 2026
- *    - GitHub dark theme, priority system, Programming Alerts, MAC block
- *
- *  V2.0  Jan 2026
- *    - Full rebuild: multi-practice, USERS object, COL constants
- *
+ * Analyst (Accudoc): Yaseen, Praveen, Anitha, Vijay
+ *   See own + Craig + A3MB group
  *
  * ═══════════════════════════════════════════════════════════════════════
- * DEBUG QUICK REFERENCE (all functions in CWE-Debug.gs)
+ * SECTION 6 — CRITICAL BUG HISTORY
  * ═══════════════════════════════════════════════════════════════════════
  *
- *  "Practice dropdown empty"      debug_getPractices()
- *  "Provider dropdown empty"      debug_getProviders()
- *  "Payer dropdown empty"         debug_getPayers()
- *  "CARC search returns nothing"  debug_getCARCLookup()
- *  "Action banner not showing"    debug_getCARCLookup()
- *  "MAC block missing"            debug_getMACLookup()
- *  "Wrong name / can't log in"    debug_getCurrentUser()
- *  "Can't see certain claims"     debug_getCurrentUser()
- *  "Sheet missing"                debug_checkSheets()
- *  "Column data shifted"          debug_checkClaimsColumns()
- *  "Form throws error"            debug_testIntakeFormData()
- *  "Sidebar blank or errors"      debug_testSidebarForRow()
- *  "Not sure where to start"      debug_runAll()
+ * Edit form showed only 4 type buttons, no fields
+ *   CAUSE: <?= JSON.stringify(existing) ?> HTML-encoded quotes, broke JSON
+ *   FIX:   All JS scriptlets changed to <?!= ?>
+ *   RULE:  Never use <?= ?> for JavaScript values
  *
+ * selectIssueType crashed on programmatic call from prefillForm
+ *   CAUSE: event.currentTarget is null when not triggered by real user click
+ *   FIX:   Added optional el parameter to selectIssueType(type, el)
+ *
+ * AI Polish returned "Could not reach AI"
+ *   CAUSE: Browser fetch() blocked by Google iframe sandbox
+ *   FIX:   Server-side polishResolutionNote() via UrlFetchApp
+ *
+ * Date stored as serial number
+ *   CAUSE: Date serializes as timestamp through JSON
+ *   FIX:   Always new Date(value) when reading date columns
+ *
+ * Sheet switched on workflow click
+ *   CAUSE: Leftover activateClaimsSheet() in openWorkflowSidebarByRow()
+ *   FIX:   Removed the call
  *
  * ═══════════════════════════════════════════════════════════════════════
- * NEW SESSION HANDOFF INSTRUCTIONS
+ * SECTION 7 — DESIGN DECISIONS
  * ═══════════════════════════════════════════════════════════════════════
  *
- *  1. Upload CWE-Docs.gs only — gives full project context
- *  2. Upload only the specific .gs or .html files being changed
- *  3. State current version: V2.5
- *  4. Files changed most often:
- *       Canvas / metrics / ref sheets  →  CWE-AppView.gs
- *       Menu structure                 →  CWE-Main.gs
- *       Dashboard / sidebar data       →  CWE-Dashboard.gs
- *       Claim writing / stages         →  CWE-Workflows.gs
- *       Intake form UI                 →  CWE-Forms.gs + IntakeForm.html
- *       CARC decision trees            →  CWE-CARC-Workflows.gs
- *       Sheet setup / structure        →  CWE-Setup.gs
- *       Add / change users             →  CWE-Main.gs (USERS object)
+ * AI POLISH ROUTING:
+ *   All Anthropic API calls go through UrlFetchApp server-side.
+ *   Model: claude-haiku (fast, cheap, sufficient for short comment polish)
+ *   API key in Script Properties as ANTHROPIC_API_KEY - never in source code.
+ *
+ * RESOLUTION FORM UX:
+ *   Inline expansion, not modal. Biller sees claim context + form together.
+ *   600-char limit matches target billing system comments field.
+ *   AI proposes, biller approves - always editable before saving.
+ *
+ * SUPERVISOR VIEW - CLIENT-SIDE FILTERING:
+ *   No server call on view switch. Filters allQueue array already in memory.
+ *   Metrics, queue, and breakdowns all recompute client-side instantly.
+ *
+ * PRIORITY CALCULATION:
+ *   Critical (Past Due): <=15 days to timely filing deadline
+ *   High (Urgent): 16-30 days
+ *   Medium: 31-60 days
+ *   Low: >60 days
+ *   Medicare/Medicaid: 365-day window
+ *   Commercial: payer-specific from REF-Payers, default 90 days
+ *   Recalculated on every getIssueData() call.
+ *
+ * PTID / RELATED ACCOUNTS:
+ *   PTID = patient ID from PM system
+ *   RELATED_ACCOUNTS = comma-separated account numbers for same patient
+ *   Green resolution banner shown in workflow when related accounts exist
  */
