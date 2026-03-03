@@ -510,10 +510,45 @@ function initViewingBar(teamMembers) {
   bar.classList.add('visible');
 }
 
+function renderMetricsForViewing() {
+  if (!dashboardData) return;
+  var queue = getQueueForViewing();
+
+  if (!viewingUser) {
+    // Back to self — restore full dataset metrics
+    var total = dashboardData.totalOpen || 0;
+    var crit  = dashboardData.criticalHigh || 0;
+    var escN  = dashboardData.escalatedCount || 0;
+    set('m-total', total);
+    set('m-total-sub', total === 1 ? '1 open claim' : total + ' open claims');
+    set('m-crit', crit);
+    set('m-crit-sub', crit === 0 ? 'none flagged' : crit + ' flagged');
+    set('m-esc', escN);
+    set('m-var', fmtDollars(dashboardData.totalVariance));
+    return;
+  }
+
+  // Compute metrics from the viewed user's queue
+  var total = queue.length;
+  var crit  = queue.filter(function(c) {
+    return c.priority === 'Critical (Past Due)' || c.priority === 'High (Urgent)';
+  }).length;
+  var escN  = queue.filter(function(c) { return c.stage === 'Escalated'; }).length;
+  var variance = queue.reduce(function(sum, c) { return sum + (parseFloat(c.amount) || 0); }, 0);
+
+  set('m-total', total);
+  set('m-total-sub', total === 1 ? '1 open claim' : total + ' open claims');
+  set('m-crit', crit);
+  set('m-crit-sub', crit === 0 ? 'none flagged' : crit + ' flagged');
+  set('m-esc', escN);
+  set('m-var', fmtDollars(variance));
+}
+
 function onViewingChange() {
   var val = document.getElementById('viewingSelect').value;
   viewingUser = (val === '__self__') ? null : val;
   activeFilter = null;
+  renderMetricsForViewing();
   renderQueueForViewing();
   updateQueueLabel();
   renderBreakdownsForViewing();
@@ -651,6 +686,7 @@ function applyFilter(type, value) {
 function clearFilter() {
   activeFilter = null;
   if (dashboardData) {
+    renderMetricsForViewing();
     renderQueueForViewing();
     renderBreakdownsForViewing();
   }
@@ -956,49 +992,38 @@ function polishWithAI() {
 
   var issue = currentIssue || {};
   var contextLines = [
-    issue.issueType       ? 'Issue type: '      + issue.issueType       : '',
-    issue.payerName       ? 'Payer: '            + issue.payerName       : '',
-    issue.carcCode        ? 'CARC code: '        + issue.carcCode        : '',
-    issue.carcDescription ? 'Denial reason: '   + issue.carcDescription  : '',
-    issue.denialCategory  ? 'Category: '        + issue.denialCategory   : '',
-    issue.cpt             ? 'CPT: '             + issue.cpt              : '',
-    issue.dos             ? 'DOS: '             + issue.dos              : '',
-    action                ? 'Action taken: '    + action                 : '',
-    outcome               ? 'Outcome: '         + outcome                : '',
-    notes                 ? 'Biller notes: '    + notes                  : ''
+    issue.issueType       ? 'Issue type: '     + issue.issueType       : '',
+    issue.payerName       ? 'Payer: '           + issue.payerName       : '',
+    issue.carcCode        ? 'CARC code: '       + issue.carcCode        : '',
+    issue.carcDescription ? 'Denial reason: '  + issue.carcDescription  : '',
+    issue.denialCategory  ? 'Category: '       + issue.denialCategory   : '',
+    issue.cpt             ? 'CPT: '            + issue.cpt              : '',
+    issue.dos             ? 'DOS: '            + issue.dos              : '',
+    action                ? 'Action taken: '   + action                 : '',
+    outcome               ? 'Outcome: '        + outcome                : '',
+    notes                 ? 'Biller notes: '   + notes                  : ''
   ].filter(Boolean).join('\n');
 
-  var prompt = 'You are a medical billing specialist writing a concise, professional comment for a billing system comments field.\n\nClaim context:\n' + contextLines + '\n\nWrite a clear, professional resolution comment that:\n- Summarizes the issue and resolution in plain language\n- Uses proper medical billing terminology\n- Is factual and audit-trail appropriate\n- Is a single flowing note (no bullet points)\n- Is under 600 characters total\n\nReturn ONLY the comment text. No preamble, no quotes.';
-
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
-      messages: [{ role: 'user', content: prompt }]
+  google.script.run
+    .withSuccessHandler(function(text) {
+      if (text) {
+        document.getElementById('res-notes').value = text;
+        updateCharCount();
+        statusEl.textContent = '✨ Polished! Review and edit as needed.';
+        statusEl.style.color = '#10b981';
+        btn.textContent = '✨ Re-polish';
+      } else {
+        statusEl.textContent = '⚠️ AI returned an empty response. Try again.';
+      }
+      btn.disabled = false;
     })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    var text = data.content && data.content[0] && data.content[0].text
-      ? data.content[0].text.trim() : '';
-    if (text) {
-      document.getElementById('res-notes').value = text;
-      updateCharCount();
-      statusEl.textContent = '✨ Polished! Review and edit as needed.';
-      statusEl.style.color = '#10b981';
-      btn.textContent = '✨ Re-polish';
-    } else {
-      statusEl.textContent = '⚠️ Unexpected AI response. Try again.';
-    }
-    btn.disabled = false;
-  })
-  .catch(function() {
-    statusEl.textContent = '⚠️ Could not reach AI. Check connection.';
-    btn.textContent = '✨ Polish with AI';
-    btn.disabled = false;
-  });
+    .withFailureHandler(function(e) {
+      statusEl.textContent = '⚠️ ' + (e.message || 'AI call failed. Check ANTHROPIC_API_KEY in Script Properties.');
+      statusEl.style.color = '#ef4444';
+      btn.textContent = '✨ Polish with AI';
+      btn.disabled = false;
+    })
+    .polishResolutionNote(contextLines);
 }
 
 function confirmResolve() {
