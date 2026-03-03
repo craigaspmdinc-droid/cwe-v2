@@ -152,28 +152,28 @@
 <body>
   <div class="issue-type-grid">
     <div class="tooltip-wrapper">
-      <div class="issue-type-btn" onclick="selectIssueType('Denial')">
+      <div class="issue-type-btn" onclick="selectIssueType('Denial', this)">
         <div class="issue-icon">🚫</div>
         <div class="issue-label">Denial</div>
       </div>
       <div class="tooltip">Payer received and processed the claim but refused payment. Includes CO, PR, and OA denial codes. Appeal deadlines apply.</div>
     </div>
     <div class="tooltip-wrapper">
-      <div class="issue-type-btn" onclick="selectIssueType('Rejection')">
+      <div class="issue-type-btn" onclick="selectIssueType('Rejection', this)">
         <div class="issue-icon">❌</div>
         <div class="issue-label">Rejection</div>
       </div>
       <div class="tooltip">Claim was never processed — returned due to a technical or formatting error. Must be corrected and resubmitted.</div>
     </div>
     <div class="tooltip-wrapper">
-      <div class="issue-type-btn" onclick="selectIssueType('Payment')">
+      <div class="issue-type-btn" onclick="selectIssueType('Payment', this)">
         <div class="issue-icon">💰</div>
         <div class="issue-label">Payment Issue</div>
       </div>
       <div class="tooltip">Claim was paid but the amount is incorrect. Use for underpayments, overpayments, or contractual disputes.</div>
     </div>
     <div class="tooltip-wrapper">
-      <div class="issue-type-btn" onclick="selectIssueType('Internal')">
+      <div class="issue-type-btn" onclick="selectIssueType('Internal', this)">
         <div class="issue-icon">⚙️</div>
         <div class="issue-label">Internal Issue</div>
       </div>
@@ -362,10 +362,17 @@
     }
 
     function prefillForm() {
+      // Step 1: directly call selectIssueType with the button element — avoids event.currentTarget crash
       document.querySelectorAll('.issue-type-btn').forEach(function(btn) {
-        if (btn.innerText.trim().indexOf(existing.issueType) !== -1) { btn.click(); }
+        if (btn.innerText.trim().indexOf(existing.issueType) !== -1) {
+          selectIssueType(existing.issueType, btn);
+        }
       });
+
+      // Step 2: wait for fields to render, then fill everything
       setTimeout(function() {
+
+        // Practice
         var practiceSelect = document.getElementById('practice');
         for (var i = 0; i < practiceSelect.options.length; i++) {
           if (practiceSelect.options[i].text === existing.practice) {
@@ -374,19 +381,32 @@
             break;
           }
         }
+
+        // Simple text/number fields
         if (existing.cpt)               document.getElementById('cpt').value = existing.cpt;
         if (existing.dos)               document.getElementById('dos').value = existing.dos;
         if (existing.accountNumber)     document.getElementById('accountNumberInput').value = existing.accountNumber;
         if (existing.denialRejectionDate) document.getElementById('denialRejectionDate').value = existing.denialRejectionDate;
         if (existing.expectedAmount)    document.getElementById('expectedAmount').value = existing.expectedAmount;
         if (existing.paidAmount)        document.getElementById('paidAmount').value = existing.paidAmount;
+        if (existing.batchId)           document.getElementById('batchId').value = existing.batchId;
         if (existing.assignedTo)        document.getElementById('assignedTo').value = existing.assignedTo;
         if (existing.coverageLevel)     document.getElementById('coverageLevel').value = existing.coverageLevel;
+
+        // State (hidden field used for payer lookup)
+        if (existing.state) {
+          var stateEl = document.getElementById('state');
+          if (stateEl) stateEl.value = existing.state;
+        }
+
+        // PTID + related accounts
         if (existing.ptid) {
           document.getElementById('ptidInput').value = existing.ptid;
           toggleRelatedAccounts();
         }
-        if (existing.relatedAccounts)   document.getElementById('relatedAccountsInput').value = existing.relatedAccounts;
+        if (existing.relatedAccounts) document.getElementById('relatedAccountsInput').value = existing.relatedAccounts;
+
+        // CARC / RARC
         if (existing.carcCode) {
           carcSelection = { code: existing.carcCode, description: existing.carcDescription || '', groupCode: existing.carcGroupCode || '' };
           document.getElementById('carcCode').value = existing.carcCode;
@@ -399,13 +419,91 @@
           document.getElementById('rarcSelected').innerHTML = '✓ ' + existing.rarcCode + ' - ' + (existing.rarcDescription || '');
           document.getElementById('rarcSelected').style.display = 'block';
         }
+
+        // Payer — set value directly (options are static or loaded by state)
+        if (existing.payerName) {
+          var payerSel = document.getElementById('payer');
+          // Try to find matching option; if not found, set as free text fallback
+          var payerFound = false;
+          for (var p = 0; p < payerSel.options.length; p++) {
+            if (payerSel.options[p].value === existing.payerName || payerSel.options[p].text === existing.payerName) {
+              payerSel.selectedIndex = p;
+              payerFound = true;
+              break;
+            }
+          }
+          if (!payerFound) {
+            // Add a temporary option so the value is visible
+            var opt = document.createElement('option');
+            opt.value = existing.payerName;
+            opt.text  = existing.payerName;
+            opt.selected = true;
+            payerSel.appendChild(opt);
+          }
+          selectedPayer = existing.payerName;
+          loadCoverageTypes();
+        }
+
+        // Coverage type — needs short delay after loadCoverageTypes fires
+        setTimeout(function() {
+          if (existing.coverageType) {
+            var covSel = document.getElementById('coverageType');
+            for (var c = 0; c < covSel.options.length; c++) {
+              if (covSel.options[c].value === existing.coverageType || covSel.options[c].text === existing.coverageType) {
+                covSel.selectedIndex = c;
+                break;
+              }
+            }
+            // Fallback: inject option if not present
+            if (covSel.value !== existing.coverageType) {
+              var covOpt = document.createElement('option');
+              covOpt.value = existing.coverageType;
+              covOpt.text  = existing.coverageType;
+              covOpt.selected = true;
+              covSel.appendChild(covOpt);
+            }
+            selectedCoverage = existing.coverageType;
+          }
+
+          // Denial category — also needs to wait for loadDenialCategories
+          if (existing.denialCategory) {
+            var catSel = document.getElementById('denialCategory');
+            for (var d = 0; d < catSel.options.length; d++) {
+              if (catSel.options[d].value === existing.denialCategory || catSel.options[d].text === existing.denialCategory) {
+                catSel.selectedIndex = d;
+                break;
+              }
+            }
+            if (catSel.value !== existing.denialCategory) {
+              var catOpt = document.createElement('option');
+              catOpt.value = existing.denialCategory;
+              catOpt.text  = existing.denialCategory;
+              catOpt.selected = true;
+              catSel.appendChild(catOpt);
+            }
+          }
+
+          // Provider — wait for loadProviders to complete
+          if (existing.provider) {
+            var provSel = document.getElementById('provider');
+            for (var v = 0; v < provSel.options.length; v++) {
+              if (provSel.options[v].value === existing.provider || provSel.options[v].text === existing.provider) {
+                provSel.selectedIndex = v;
+                break;
+              }
+            }
+          }
+
+        }, 600);
+
       }, 1000);
     }
 
-    function selectIssueType(type) {
+    function selectIssueType(type, el) {
       selectedType = type;
       document.querySelectorAll('.issue-type-btn').forEach(function(btn) { btn.classList.remove('selected'); });
-      event.currentTarget.classList.add('selected');
+      var target = el || (typeof event !== 'undefined' && event && event.currentTarget);
+      if (target) target.classList.add('selected');
       document.getElementById('formFields').style.display = 'block';
 
       ['denialRejectionDateField','accountNumberField','payerFields','denialFields',
