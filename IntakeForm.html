@@ -340,7 +340,7 @@
   </div>
 
   <script>
-    var selectedType = <?= existing.issueType ? JSON.stringify(existing.issueType) : 'null' ?>;
+    var selectedType = <?!= existing.issueType ? JSON.stringify(existing.issueType) : 'null' ?>;
     var selectedPractice = null;
     var selectedPayer = null;
     var selectedCoverage = null;
@@ -348,7 +348,7 @@
     var rarcSelection = null;
 
     var editRow = <?!= editRow ? editRow : 'null' ?>;
-    var existing = <?= JSON.stringify(existing) ?>;
+    var existing = <?!= JSON.stringify(existing) ?>;
 
     if (editRow && existing.issueType) {
       window.onload = function() { setTimeout(prefillForm, 300); };
