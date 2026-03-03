@@ -59,6 +59,7 @@ function showEditIssueForm(row) {
     denialCategory:      data[COL.DENIAL_CATEGORY],
     denialRejectionDate: data[COL.DENIAL_DATE] ? Utilities.formatDate(new Date(data[COL.DENIAL_DATE]), Session.getScriptTimeZone(), 'yyyy-MM-dd') : '',
     coverageType:        data[COL.COVERAGE_TYPE],
+    coverageLevel:       data[COL.COVERAGE_LEVEL],
     carcCode:            data[COL.ISSUE_DETAILS],
     carcDescription:     data[COL.CARC_DESCRIPTION],
     rarcCode:            data[COL.RARC_CODE],
@@ -67,7 +68,8 @@ function showEditIssueForm(row) {
     assignedTo:          data[COL.ASSIGNED_TO],
     batchId:             data[COL.BATCH_ID],
     state:               data[COL.STATE],
-    coverageLevel:       data[COL.COVERAGE_LEVEL]
+    ptid:                data[COL.PTID],                // ← V2.5
+    relatedAccounts:     data[COL.RELATED_ACCOUNTS]     // ← V2.5
   };
 
   var practiceOptions = practices.map(function(p) {
@@ -752,12 +754,12 @@ function buildProgrammingWorkflow(issue, color) {
   var html = '<div class="card"><div class="section-title">⚙️ Programming Error</div>';
   var stage = issue.workflowStage;
   var steps = [
-    { label: 'Document Error',       stages: ['New', 'Category Selected'] },
-    { label: 'Escalate',             stages: ['Error Documented'] },
-    { label: 'Confirm Fix',          stages: ['Sent to Programming'] },
-    { label: 'Resubmit',             stages: ['Fix Confirmed'] },
-    { label: 'Monitor',              stages: ['Resubmitted'] },
-    { label: 'Resolved',             stages: ['Escalated'] }
+    { label: 'Document Error',  stages: ['New', 'Category Selected'] },
+    { label: 'Escalate',        stages: ['Error Documented'] },
+    { label: 'Confirm Fix',     stages: ['Sent to Programming'] },
+    { label: 'Resubmit',        stages: ['Fix Confirmed'] },
+    { label: 'Monitor',         stages: ['Resubmitted'] },
+    { label: 'Resolved',        stages: ['Escalated'] }
   ];
   html += buildProgressBar(steps, stage);
   if (stage === 'New') {
