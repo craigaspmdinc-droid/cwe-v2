@@ -134,7 +134,8 @@ function logNewIssue(issue) {
     checkProgrammingAlert(issue.errorType, issue.practice);
   }
 
-  return issueId;
+  PropertiesService.getUserProperties().setProperty('OPEN_ROW_ON_LOAD', String(nextRow));
+  return { issueId: issueId, row: nextRow };
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -324,23 +325,24 @@ function resolveIssue(row, resolutionData) {
   sheet.getRange(row, COL.DATE_RESOLVED + 1).setValue(new Date());
   sheet.getRange(row, COL.WORKFLOW_STAGE + 1).setValue('Resolved');
 
-  if (resolutionData) {
-    if (resolutionData.resolutionAction) {
-      sheet.getRange(row, COL.RESOLUTION_ACTION + 1).setValue(resolutionData.resolutionAction);
-    }
-    if (resolutionData.outcome) {
-      sheet.getRange(row, COL.OUTCOME + 1).setValue(resolutionData.outcome);
-    }
-    if (resolutionData.resolutionNotes) {
-      sheet.getRange(row, COL.RESOLUTION_NOTES + 1).setValue(resolutionData.resolutionNotes);
-    }
+  resolutionData = resolutionData || {};
+
+  if (resolutionData.resolutionAction) {
+    sheet.getRange(row, COL.RESOLUTION_ACTION + 1).setValue(resolutionData.resolutionAction);
+  }
+  if (resolutionData.outcome) {
+    sheet.getRange(row, COL.OUTCOME + 1).setValue(resolutionData.outcome);
+  }
+  if (resolutionData.resolutionNotes) {
+    sheet.getRange(row, COL.RESOLUTION_NOTES + 1).setValue(resolutionData.resolutionNotes);
   }
 
   var issueId = sheet.getRange(row, 1).getValue();
-  var actionNote = resolutionData && resolutionData.resolutionAction
+  var actionNote = resolutionData.resolutionAction
     ? '✅ Resolved — ' + resolutionData.resolutionAction + (resolutionData.outcome ? ' | ' + resolutionData.outcome : '')
     : '✅ Issue marked as RESOLVED';
   logActivity(issueId, actionNote, 'Resolved');
+  return true;
 }
 
 function logResearchAndAdvance(issueId, row, note) {
@@ -469,3 +471,14 @@ function getIssueData(row) {
     resolutionNotes:    data[COL.RESOLUTION_NOTES] || ''
   };
 }
+
+function getRowByIssueId(issueId) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Claims');
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === issueId) return i + 1;
+  }
+  return null;
+}
+
+

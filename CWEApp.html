@@ -634,6 +634,9 @@ function renderDashboard(d) {
     new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
   document.getElementById('app').style.display = 'flex';
+  if (d.openRow) {
+    setTimeout(function(){ showWorkflow(d.openRow); }, 300);
+  }
 }
 
 function doRefresh() {
@@ -908,7 +911,7 @@ function markResolved() {
   var existing = document.getElementById('resolution-capture');
   if (existing) { existing.remove(); return; }
 
-  var container = document.getElementById('workflow-content') || document.body;
+  var container = document.getElementById('wf-content') || document.body;
   var form = document.createElement('div');
   form.id = 'resolution-capture';
   form.innerHTML = `
@@ -948,7 +951,7 @@ function markResolved() {
       <div id="ai-status" style="display:none;font-size:11px;color:#818cf8;margin-bottom:8px;"></div>
 
       <div style="display:flex;gap:8px;margin-top:4px;">
-        <button onclick="confirmResolve()" style="flex:1;background:#10b981;border:none;color:white;padding:9px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✅ Confirm &amp; Resolve</button>
+        <button onclick="confirmResolve(${currentIssueRow})" style="flex:1;background:#10b981;border:none;color:white;padding:9px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✅ Confirm &amp; Resolve</button>
         <button onclick="document.getElementById('resolution-capture').remove()" style="background:var(--surface);border:1px solid var(--border,#333);color:var(--muted);padding:9px 14px;border-radius:7px;font-size:12px;cursor:pointer;">Cancel</button>
       </div>
     </div>`;
@@ -1026,7 +1029,9 @@ function polishWithAI() {
     .polishResolutionNote(contextLines);
 }
 
-function confirmResolve() {
+function confirmResolve(row) {
+  row = row || currentIssueRow;
+  console.log('confirmResolve fired, row:', row);
   var action  = document.getElementById('res-action').value;
   var outcome = document.getElementById('res-outcome').value;
   var notes   = (document.getElementById('res-notes').value || '').trim();
@@ -1048,7 +1053,7 @@ function confirmResolve() {
   google.script.run
     .withSuccessHandler(function() { showDashboard(); doRefresh(); })
     .withFailureHandler(function(e) { showWfMsg('Error: ' + e.message, 'danger'); })
-    .resolveIssue(currentIssueRow, {
+    .resolveIssue(row, {
       resolutionAction: action,
       outcome:          outcome,
       resolutionNotes:  notes

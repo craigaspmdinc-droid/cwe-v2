@@ -506,7 +506,7 @@
 
     function selectIssueType(type, el) {
       selectedType = type;
-      document.querySelectorAll('.issue-type-btn').forEach(function(btn) { btn.classList.remove('selected'); });
+      document.querySelectorAll('.issue-type-btn').forEach(function(b) { b.classList.remove('selected'); });
       var target = el || (typeof event !== 'undefined' && event && event.currentTarget);
       if (target) target.classList.add('selected');
       document.getElementById('formFields').style.display = 'block';
@@ -758,11 +758,12 @@
       }
       if (!issue.practice) { alert('Practice is required'); return; }
       google.script.run
-        .withSuccessHandler(function(issueId) {
-          alert('✅ Issue logged successfully!');
+        .withSuccessHandler(function(result) {
           google.script.host.close();
-          google.script.run.openDashboardSidebar;
-        })
+          google.script.run
+            .withSuccessHandler(function(){})
+            .openWorkflowSidebarByRow(result.row);
+      })
         .withFailureHandler(function(error) { alert('Error: ' + error); })
         .logNewIssue(issue);
     }
@@ -797,13 +798,14 @@
         relatedAccounts: getRelatedAccounts()
       };
       google.script.run
-        .withSuccessHandler(function() {
-          alert('✅ Claim updated successfully!');
+        .withSuccessHandler(function(issueId) {
           google.script.host.close();
-          google.script.run.openDashboardSidebar;
+          google.script.run
+            .withSuccessHandler(function(){})
+            .openDashboardSidebar();
         })
         .withFailureHandler(function(error) { alert('Error: ' + error); })
-        .updateIssue(editRow, issue);
+        .logNewIssue(issue);
     }
   </script>
 </body>

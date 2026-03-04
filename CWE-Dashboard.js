@@ -181,7 +181,7 @@ function getDashboardData() {
     var byStageCounts    = {};
     var byPriorityCounts = {};
     var myQueue          = [];
-    var allQueue         = []; // all visible open claims (for supervisor view)
+    var allQueue         = [];
 
     data.forEach(function(row, idx) {
       var stage    = String(row[COL.WORKFLOW_STAGE] || '').trim().toUpperCase();
@@ -221,10 +221,8 @@ function getDashboardData() {
         agingDays:  agingDays
       };
 
-      // allQueue: all visible claims (used by supervisor "Viewing as")
       allQueue.push(queueItem);
 
-      // myQueue: only claims assigned to current user
       var isMe = (assignee.toLowerCase() === user.name.toLowerCase());
       if (isMe && myQueue.length < DASH_QUEUE_MAX) {
         myQueue.push(queueItem);
@@ -243,10 +241,17 @@ function getDashboardData() {
     sortQueue(myQueue);
     sortQueue(allQueue);
 
-    // Team members list — only returned for Admin/Supervisor
     var teamMembers = [];
     if (user.level === 'Admin' || user.level === 'Supervisor') {
       teamMembers = getTeamMemberNames();
+    }
+
+    var openRow = null;
+    var props = PropertiesService.getUserProperties();
+    var storedRow = props.getProperty('OPEN_ROW_ON_LOAD');
+    if (storedRow) {
+      props.deleteProperty('OPEN_ROW_ON_LOAD');
+      openRow = parseInt(storedRow);
     }
 
     return {
@@ -261,7 +266,8 @@ function getDashboardData() {
       byPriorityCounts:  byPriorityCounts,
       myQueue:           myQueue,
       allQueue:          allQueue,
-      teamMembers:       teamMembers
+      teamMembers:       teamMembers,
+      openRow:           openRow
     };
 
   } catch(e) {
