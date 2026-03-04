@@ -1065,7 +1065,15 @@ function doReassign() {
   if (v === '__other__') v = document.getElementById('reassignOther').value.trim();
   if (!v) { showWfMsg('Please select or enter a person.', 'warn'); return; }
   google.script.run
-    .withSuccessHandler(function(){ showWfMsg('✅ Reassigned to '+v, 'success'); showWorkflow(currentIssueRow); })
+    .withSuccessHandler(function(){
+  showWfMsg('✅ Reassigned to '+v, 'success');
+  // Refresh dashboard data cache so metrics/queue stay accurate
+  google.script.run
+    .withSuccessHandler(function(d){ dashboardData = d; })
+    .withFailureHandler(function(){})
+    .getDashboardData();
+  showWorkflow(currentIssueRow);
+})
     .withFailureHandler(function(e){ showWfMsg('Error: '+e.message,'danger'); })
     .updateIssueField(currentIssueRow, 'assignedTo', v);
 }
