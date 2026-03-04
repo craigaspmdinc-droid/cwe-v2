@@ -279,7 +279,6 @@ function cweBuildCanvas(ss) {
   cweRow(sheet, 1, 1, 25, C.SURFACE);
   cweBorder(sheet, 1, 1, 1, 25, 'bottom', C.BORDER);
   cweCell(sheet, 1, 2, '⚡  CWE V2.5', 13, 'bold', C.ACCENT, C.SURFACE, 'left');
-  cweCell(sheet, 1, 7, 'CLAIMS WORKFLOW ENGINE', 11, 'bold', C.TEXT, C.SURFACE, 'left');
   var ts = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMM d, yyyy  h:mm a');
   cweCell(sheet, 1, 8, 'Updated  ' + ts, 9, 'normal', C.MUTED, C.SURFACE, 'right');
 

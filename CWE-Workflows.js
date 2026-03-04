@@ -135,6 +135,7 @@ function logNewIssue(issue) {
   }
 
   PropertiesService.getUserProperties().setProperty('OPEN_ROW_ON_LOAD', String(nextRow));
+  try { refreshMetrics(); } catch(e) { Logger.log('refreshMetrics skipped: ' + e.message); }
   return { issueId: issueId, row: nextRow };
 }
 
