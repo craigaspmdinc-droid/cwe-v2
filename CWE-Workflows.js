@@ -122,7 +122,8 @@ function logNewIssue(issue) {
     issue.relatedAccounts || '',      // AJ - Related Account Numbers
     '',                               // AK - Resolution Action
     '',                               // AL - Outcome
-    ''                                // AM - Resolution Notes
+    '',                               // AM - Resolution Notes
+    issue.planType || ''              // AN - Plan Type
   ]);
 
   var daysFormula = '=IF(ISBLANK(S' + nextRow + '), INT(TODAY()-K' + nextRow + '), INT(S' + nextRow + '-K' + nextRow + '))';
@@ -134,9 +135,33 @@ function logNewIssue(issue) {
     checkProgrammingAlert(issue.errorType, issue.practice);
   }
 
-  PropertiesService.getUserProperties().setProperty('OPEN_ROW_ON_LOAD', String(nextRow));
-  try { refreshMetrics(); } catch(e) { Logger.log('refreshMetrics skipped: ' + e.message); }
+  CacheService.getUserCache().put('OPEN_ROW_ON_LOAD', String(nextRow), 60);
   return { issueId: issueId, row: nextRow };
+}
+
+function refreshMetricsQuiet() {
+  // Same as refreshMetrics() but no toast — safe to call from google.script.run context
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('CWE App');
+  if (!sheet) return;
+  var metrics = cweGetMetrics(ss);
+  var mTiles = [
+    { col: 2, val: metrics.totalOpen,                   color: '#58a6ff' },
+    { col: 4, val: metrics.criticalHigh,                color: '#f85149' },
+    { col: 6, val: metrics.escalatedCount,              color: '#d29922' },
+    { col: 8, val: '$' + cweFmt(metrics.totalVariance), color: '#3fb950' },
+  ];
+  mTiles.forEach(function(t) {
+    var cell = sheet.getRange(8, t.col);
+    cell.setValue(t.val).setNumberFormat('@').setFontSize(26).setFontWeight('bold')
+      .setFontColor(t.color).setBackground('#161b22')
+      .setHorizontalAlignment('center').setVerticalAlignment('middle');
+  });
+  var ts = 'Updated  ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMM d, yyyy  h:mm a');
+  sheet.getRange(1, 8).setValue(ts)
+    .setFontSize(9).setFontColor(C.MUTED).setBackground(C.SURFACE)
+    .setHorizontalAlignment('right').setVerticalAlignment('middle');
+  SpreadsheetApp.flush();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -155,6 +180,31 @@ function updateIssue(row, issue) {
     variance = (parseFloat(issue.paidAmount) || 0) - (parseFloat(issue.expectedAmount) || 0);
   }
 
+  // ── Track changes ─────────────────────────────────────────────────
+  var changes = [];
+  function track(label, oldVal, newVal) {
+    var o = String(oldVal || '').trim();
+    var n = String(newVal || '').trim();
+    if (n && n !== o) changes.push(label + ': ' + (o || '—') + ' → ' + n);
+  }
+
+  track('Payer',            existing[COL.PAYER],             issue.payerName);
+  track('Coverage Type',    existing[COL.COVERAGE_TYPE],     issue.coverageType);
+  track('Coverage Level',   existing[COL.COVERAGE_LEVEL],    issue.coverageLevel);
+  track('Plan Type',        existing[COL.PLAN_TYPE],         issue.planType);
+  track('Practice',         existing[COL.PRACTICE],          issue.practice);
+  track('Provider',         existing[COL.PROVIDER],          issue.provider);
+  track('CPT',              existing[COL.CPT],               issue.cpt);
+  track('DOS',              existing[COL.DOS],               issue.dos);
+  track('Account #',        existing[COL.ACCOUNT_NUMBER],    issue.accountNumber);
+  track('CARC',             existing[COL.ISSUE_DETAILS],     issue.denialCode);
+  track('RARC',             existing[COL.RARC_CODE],         issue.rarcCode);
+  track('Denial Category',  existing[COL.DENIAL_CATEGORY],   issue.denialCategory);
+  track('Assigned To',      existing[COL.ASSIGNED_TO],       issue.assignedTo);
+  track('Expected $',       existing[COL.EXPECTED_AMT],      issue.expectedAmount);
+  track('Paid $',           existing[COL.PAID_AMT],          issue.paidAmount);
+
+  // ── Write updates ─────────────────────────────────────────────────
   sheet.getRange(row, COL.ISSUE_TYPE + 1).setValue(issue.issueType           || existing[COL.ISSUE_TYPE]);
   sheet.getRange(row, COL.PRACTICE + 1).setValue(issue.practice              || existing[COL.PRACTICE]);
   sheet.getRange(row, COL.PRACTICE_NPI + 1).setValue(issue.practiceNPI       || existing[COL.PRACTICE_NPI]);
@@ -178,11 +228,17 @@ function updateIssue(row, issue) {
   sheet.getRange(row, COL.RARC_CODE + 1).setValue(issue.rarcCode             || existing[COL.RARC_CODE]);
   sheet.getRange(row, COL.RARC_DESCRIPTION + 1).setValue(issue.rarcCodeDesc  || existing[COL.RARC_DESCRIPTION]);
   sheet.getRange(row, COL.CARC_GROUP_CODE + 1).setValue(issue.denialCodeGroup || existing[COL.CARC_GROUP_CODE]);
+  sheet.getRange(row, COL.PLAN_TYPE + 1).setValue(issue.planType             || existing[COL.PLAN_TYPE]);
   sheet.getRange(row, COL.COVERAGE_LEVEL + 1).setValue(issue.coverageLevel   || existing[COL.COVERAGE_LEVEL]);
   sheet.getRange(row, COL.PTID + 1).setValue(issue.ptid                      || existing[COL.PTID]);
   sheet.getRange(row, COL.RELATED_ACCOUNTS + 1).setValue(issue.relatedAccounts || existing[COL.RELATED_ACCOUNTS]);
 
-  logActivityFromSidebar(existing[COL.ISSUE_ID], '✏️ Claim edited by ' + getCurrentUser().name);
+  // ── Log activity ──────────────────────────────────────────────────
+  var note = changes.length > 0
+    ? '✏️ Claim edited by ' + getCurrentUser().name + ' | ' + changes.join(' | ')
+    : '✏️ Claim edited by ' + getCurrentUser().name + ' (no field changes detected)';
+
+  logActivityFromSidebar(existing[COL.ISSUE_ID], note);
 
   return true;
 }
@@ -195,10 +251,10 @@ function determineRootCause(issue) {
   if (issue.suggestedRootCause) return issue.suggestedRootCause;
 
   if ((issue.issueType === 'Denial' || issue.issueType === 'Payment') && issue.denialCode) {
-    var suggestion = lookupDenialSuggestion(issue.denialCode, issue.issueType);
+    var suggestion = lookupDenialSuggestion(String(issue.denialCode), issue.issueType);
     if (suggestion && suggestion.rootCause) return suggestion.rootCause;
   } else if (issue.issueType === 'Rejection' && issue.rejectionReason) {
-    var suggestion = lookupDenialSuggestion(issue.rejectionReason, 'Rejection');
+    var suggestion = lookupDenialSuggestion(String(issue.rejectionReason), 'Rejection');
     if (suggestion && suggestion.rootCause) return suggestion.rootCause;
   }
 
@@ -469,7 +525,8 @@ function getIssueData(row) {
     relatedAccounts:    data[COL.RELATED_ACCOUNTS],
     resolutionAction:   data[COL.RESOLUTION_ACTION] || '',
     outcome:            data[COL.OUTCOME] || '',
-    resolutionNotes:    data[COL.RESOLUTION_NOTES] || ''
+    resolutionNotes:    data[COL.RESOLUTION_NOTES] || '',
+    planType:           data[COL.PLAN_TYPE]
   };
 }
 

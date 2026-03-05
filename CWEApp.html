@@ -138,6 +138,19 @@
   #btn-log-new:hover { background: #79c0ff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(88,166,255,0.3); }
   #btn-log-new:active { transform: translateY(0); }
 
+  /* TEST CLAIMS BUTTON */
+  #btn-test-claim {
+    width: 100%; padding: 11px 16px;
+    background: #21262d; color: #8b949e;
+    border: 1px dashed #444; border-radius: 7px; font-family: var(--sans);
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background 0.15s, transform 0.1s;
+    margin-bottom: 14px;
+  }
+  #btn-test-claim:hover { background: #30363d; transform: translateY(-1px); }
+  #btn-test-claim:active { transform: translateY(0); }
+
   /* Supervisor "Viewing as" bar */
   #viewing-bar {
     display: none;
@@ -347,8 +360,9 @@
         <span style="background:rgba(0,0,0,0.15);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">＋</span>
         Log New Issue
       </button>
-
-      <!-- Supervisor "Viewing as" bar — only visible for Admin/Supervisor -->
+      <button id="btn-test-claim" class="fu fu1" onclick="logTestClaim()" style="display:none;">        <span style="background:rgba(0,0,0,0.15);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">🧪</span>
+        Test Claim
+      </button>
       <div id="viewing-bar" class="fu fu1">
         <div class="vb-label">Viewing:</div>
         <select id="viewingSelect" onchange="onViewingChange()">
@@ -627,6 +641,10 @@ function renderDashboard(d) {
     initViewingBar(d.teamMembers);
   }
 
+  // Show test claim button for Admin only
+  var testBtn = document.getElementById('btn-test-claim');
+  if (testBtn) testBtn.style.display = isAdmin ? 'flex' : 'none';
+
   renderQueueForViewing();
 
   document.getElementById('ts').innerHTML =
@@ -634,9 +652,12 @@ function renderDashboard(d) {
     new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
   document.getElementById('app').style.display = 'flex';
-  if (d.openRow) {
-    setTimeout(function(){ showWorkflow(d.openRow); }, 300);
-  }
+  google.script.run
+    .withSuccessHandler(function(row) {
+      console.log('getAndClearOpenRow returned:', row);
+      if (row) setTimeout(function(){ showWorkflow(row); }, 1500);
+    })
+    .getAndClearOpenRow();
 }
 
 function doRefresh() {
@@ -885,6 +906,24 @@ function renderWorkflow(d) {
 // ══════════════════════════════════════════════════════
 // WORKFLOW ACTIONS
 // ══════════════════════════════════════════════════════
+function logTestClaim() {
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result) { alert('No test data returned'); return; }
+      google.script.run
+        .withSuccessHandler(function(){})
+        .withFailureHandler(function(){})
+        .refreshMetricsQuiet();
+      google.script.run
+        .withSuccessHandler(function(){})
+        .openDashboardSidebar();
+    })
+    .withFailureHandler(function(e) { 
+      set('dash-error', '⚠️ Test claim error: ' + e.message);
+    })
+    .logTestClaim();
+}
+
 function logNewIssue()   { google.script.run.showNewIssueForm(); }
 function viewAllClaims() { activeFilter = null; renderQueueForViewing(); }
 function editClaim()     { google.script.run.withSuccessHandler(function(){}).showEditIssueForm(currentIssueRow); }

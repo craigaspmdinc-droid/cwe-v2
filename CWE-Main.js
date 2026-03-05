@@ -68,7 +68,8 @@ var COL = {
   RESOLUTION_ACTION: 36,  // AK  ← What fixed it
   OUTCOME:           37,  // AL  ← Paid / Written Off / Pending
   RESOLUTION_NOTES:  38,  // AM  ← AI-polished resolution comment (≤600 chars)
-  TOTAL_COLS:        39
+  PLAN_TYPE:         39,  // AN
+  TOTAL_COLS:        40
 };
 
 // ═══════════════════════════════════════════════════════════════════════

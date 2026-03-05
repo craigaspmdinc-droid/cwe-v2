@@ -329,7 +329,7 @@
           <?!= userOptions ?>
         </select>
       </div>
-
+      
       <div class="form-group visible">
         <label>Initial Notes</label>
         <textarea id="notes" rows="3" placeholder="Describe the issue..."></textarea>
@@ -499,6 +499,18 @@
             }
           }
 
+          // Plan type — inject option if not yet populated by loadPlanTypes
+          if (existing.planType) {
+            var planSel = document.getElementById('planType');
+            if (planSel.value !== existing.planType) {
+              var planOpt = document.createElement('option');
+              planOpt.value = existing.planType;
+              planOpt.text  = existing.planType;
+              planOpt.selected = true;
+              planSel.appendChild(planOpt);
+            }
+          }
+
         }, 600);
 
       }, 1000);
@@ -535,6 +547,110 @@
       }
     }
 
+    function fillTestData() {
+  var btn = document.querySelector('#testDataBar button');
+  btn.textContent = '⏳ Loading...';
+  btn.disabled = true;
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (!data) { btn.textContent = '🧪 Fill Test Data'; btn.disabled = false; return; }
+
+      // Select issue type — Denial
+      selectIssueType('Denial', document.querySelector('.issue-type-btn'));
+
+      setTimeout(function() {
+        // Set practice
+        var practiceSelect = document.getElementById('practice');
+        for (var i = 0; i < practiceSelect.options.length; i++) {
+          if (practiceSelect.options[i].text === data.practice) {
+            practiceSelect.selectedIndex = i;
+            loadProviders();
+            break;
+          }
+        }
+
+        // Simple fields
+        document.getElementById('cpt').value               = data.cpt;
+        document.getElementById('dos').value               = data.dos;
+        document.getElementById('denialRejectionDate').value = data.denialRejectionDate;
+        document.getElementById('accountNumberInput').value = data.accountNumber;
+        document.getElementById('expectedAmount').value    = data.expectedAmount;
+        document.getElementById('coverageLevel').value     = data.coverageLevel;
+
+        // Payer — wait for loadProviders to fire
+        setTimeout(function() {
+          // Set payer directly and trigger coverage chain
+          selectedPayer = data.payerName;
+          var payerSel = document.getElementById('payer');
+          var payerFound = false;
+          for (var p = 0; p < payerSel.options.length; p++) {
+            if (payerSel.options[p].value === data.payerName || payerSel.options[p].text === data.payerName) {
+              payerSel.selectedIndex = p;
+              payerFound = true;
+              break;
+            }
+          }
+          if (!payerFound) {
+            var opt = document.createElement('option');
+            opt.value = data.payerName; opt.text = data.payerName; opt.selected = true;
+            payerSel.appendChild(opt);
+          }
+          loadCoverageTypes();
+
+          // CARC
+          if (data.carcCode) {
+            carcSelection = { code: data.carcCode, groupCode: data.carcGroupCode, description: data.carcDescription };
+            document.getElementById('carcCode').value = data.carcCode;
+            document.getElementById('carcSelected').innerHTML = '✓ [' + data.carcGroupCode + '] ' + data.carcCode + ' - ' + data.carcDescription;
+            document.getElementById('carcSelected').style.display = 'block';
+          }
+
+          // Coverage type + plan type + denial category after async loads
+          setTimeout(function() {
+            if (data.coverageType) {
+              var covSel = document.getElementById('coverageType');
+              if (covSel.value !== data.coverageType) {
+                var covOpt = document.createElement('option');
+                covOpt.value = data.coverageType; covOpt.text = data.coverageType; covOpt.selected = true;
+                covSel.appendChild(covOpt);
+              } else {
+                covSel.value = data.coverageType;
+              }
+              selectedCoverage = data.coverageType;
+            }
+            if (data.planType) {
+              var planSel = document.getElementById('planType');
+              if (planSel.value !== data.planType) {
+                var planOpt = document.createElement('option');
+                planOpt.value = data.planType; planOpt.text = data.planType; planOpt.selected = true;
+                planSel.appendChild(planOpt);
+              }
+            }
+            if (data.denialCategory) {
+              var catSel = document.getElementById('denialCategory');
+              if (catSel.value !== data.denialCategory) {
+                var catOpt = document.createElement('option');
+                catOpt.value = data.denialCategory; catOpt.text = data.denialCategory; catOpt.selected = true;
+                catSel.appendChild(catOpt);
+              } else {
+                catSel.value = data.denialCategory;
+              }
+            }
+            btn.textContent = '🧪 Fill Test Data';
+            btn.disabled = false;
+          }, 1500);
+        }, 800);
+      }, 500);
+    })
+    .withFailureHandler(function(e) {
+      btn.textContent = '🧪 Fill Test Data';
+      btn.disabled = false;
+      alert('Test data error: ' + e);
+    })
+    .getTestClaimData();
+}
+
     function loadProviders() {
       var practiceSelect = document.getElementById('practice');
       var selectedOption = practiceSelect.options[practiceSelect.selectedIndex];
@@ -564,6 +680,9 @@
             var opt = document.createElement('option'); opt.value = p; opt.textContent = p;
             payerSelect.appendChild(opt);
           });
+          if (existing && existing.payerName) {
+            payerSelect.value = existing.payerName;
+          }
         }).getPayersForForm(state);
       }
     }
@@ -577,6 +696,10 @@
         coverageTypes.forEach(function(c) {
           var opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt);
         });
+        if (existing && existing.coverageType) {
+         sel.value = existing.coverageType;
+          loadPlanTypes();
+        }
       }).getCoverageTypesByPayer(selectedPayer);
     }
 
@@ -589,6 +712,9 @@
         planTypes.forEach(function(p) {
           var opt = document.createElement('option'); opt.value = p; opt.textContent = p; sel.appendChild(opt);
         });
+        if (existing && existing.planType) {
+          sel.value = existing.planType;
+        }
       }).getPlanTypesByPayerAndCoverage(selectedPayer, selectedCoverage);
     }
 
@@ -603,6 +729,9 @@
           opt.setAttribute('data-action', cat.suggestedAction);
           sel.appendChild(opt);
         });
+        if (existing && existing.denialCategory) {
+          sel.value = existing.denialCategory;
+        }
       }).getDenialCategories();
     }
 
@@ -701,8 +830,166 @@
       return raw.replace(/\n/g, ',').replace(/,\s*/g, ',').replace(/,+/g, ',').replace(/^,|,$/g, '').trim();
     }
 
+    function clearValidation() {
+      document.querySelectorAll('.field-error').forEach(function(el) {
+        el.style.border = '2px solid #e0e0e0';
+        el.classList.remove('field-error');
+      });
+      var summary = document.getElementById('validation-summary');
+      if (summary) summary.remove();
+    }
+
+    function showValidationErrors(errors, fields) {
+      clearValidation();
+      // Highlight fields
+      fields.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) { el.style.border = '2px solid #e74c3c'; el.classList.add('field-error'); }
+      });
+      // Show summary at top of form section
+      var summary = document.createElement('div');
+      summary.id = 'validation-summary';
+      summary.style.cssText = 'background:#fef2f2;border-left:4px solid #e74c3c;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#b91c1c;';
+      summary.innerHTML = '<strong>Please fix the following:</strong><ul style="margin:6px 0 0 16px;padding:0;">' +
+        errors.map(function(e) { return '<li>' + e + '</li>'; }).join('') + '</ul>';
+      var formSection = document.querySelector('.form-section');
+      formSection.insertBefore(summary, formSection.firstChild);
+      formSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function validateForm() {
+      var errors = [];
+      var fields = [];
+
+      // Practice — all types
+      if (!document.getElementById('practice').value) {
+        errors.push('Practice is required');
+        fields.push('practice');
+      }
+
+      if (selectedType === 'Denial' || selectedType === 'Rejection') {
+        // Account Number OR PTID
+        var acct = document.getElementById('accountNumberInput').value.trim();
+        var ptid = document.getElementById('ptidInput').value.trim();
+        if (!acct && !ptid) {
+          errors.push('Account Number or PTID is required');
+          fields.push('accountNumberInput');
+          fields.push('ptidInput');
+        }
+        // Payer
+        if (!document.getElementById('payer').value) {
+          errors.push('Payer is required');
+          fields.push('payer');
+        }
+        // Coverage Type
+        if (!document.getElementById('coverageType').value) {
+          errors.push('Coverage Type is required');
+          fields.push('coverageType');
+        }
+        // Coverage Level
+        if (!document.getElementById('coverageLevel').value) {
+          errors.push('Coverage Level is required');
+          fields.push('coverageLevel');
+        }
+        // CPT
+        if (!document.getElementById('cpt').value.trim()) {
+          errors.push('CPT Code is required');
+          fields.push('cpt');
+        }
+        // DOS
+        if (!document.getElementById('dos').value) {
+          errors.push('Date of Service is required');
+          fields.push('dos');
+        }
+        // Denial/Rejection Date
+        if (!document.getElementById('denialRejectionDate').value) {
+          errors.push('Denial / Rejection Date is required');
+          fields.push('denialRejectionDate');
+        }
+        // CARC OR Denial Category (Denial only)
+        if (selectedType === 'Denial') {
+          var carc = document.getElementById('carcCode').value.trim();
+          var cat  = document.getElementById('denialCategory').value;
+          if (!carc && !cat) {
+            errors.push('CARC Code or Denial Category is required');
+            fields.push('carcCode');
+            fields.push('denialCategory');
+          }
+        }
+        // Rejection Category (Rejection only)
+        if (selectedType === 'Rejection') {
+          if (!document.getElementById('rejectionCategory').value) {
+            errors.push('Rejection Category is required');
+            fields.push('rejectionCategory');
+          }
+        }
+      }
+
+      if (selectedType === 'Payment') {
+        // Account Number OR PTID
+        var pacct = document.getElementById('accountNumberInput').value.trim();
+        var pptid = document.getElementById('ptidInput').value.trim();
+        if (!pacct && !pptid) {
+          errors.push('Account Number or PTID is required');
+          fields.push('accountNumberInput');
+          fields.push('ptidInput');
+        }
+        if (!document.getElementById('payer').value) {
+          errors.push('Payer is required');
+          fields.push('payer');
+        }
+        if (!document.getElementById('coverageType').value) {
+          errors.push('Coverage Type is required');
+          fields.push('coverageType');
+        }
+        if (!document.getElementById('coverageLevel').value) {
+          errors.push('Coverage Level is required');
+          fields.push('coverageLevel');
+        }
+        if (!document.getElementById('cpt').value.trim()) {
+          errors.push('CPT Code is required');
+          fields.push('cpt');
+        }
+        if (!document.getElementById('dos').value) {
+          errors.push('Date of Service is required');
+          fields.push('dos');
+        }
+        if (!document.getElementById('expectedAmount').value) {
+          errors.push('Expected Amount is required');
+          fields.push('expectedAmount');
+        }
+        if (!document.getElementById('paidAmount').value) {
+          errors.push('Paid Amount is required');
+          fields.push('paidAmount');
+        }
+        if (!document.getElementById('paymentType').value) {
+          errors.push('Payment Issue Type is required');
+          fields.push('paymentType');
+        }
+      }
+
+      if (selectedType === 'Internal') {
+        if (!document.getElementById('batchId').value.trim()) {
+          errors.push('Batch ID is required');
+          fields.push('batchId');
+        }
+        if (!document.getElementById('errorType').value) {
+          errors.push('Error Type is required');
+          fields.push('errorType');
+        }
+      }
+
+      return { errors: errors, fields: fields };
+    }
+
     function submitIssue() {
       if (!selectedType) { alert('Please select an issue type'); return; }
+      var validation = validateForm();
+      if (validation.errors.length > 0) {
+        showValidationErrors(validation.errors, validation.fields);
+        return;
+      }
+      clearValidation();
       var practiceSelect = document.getElementById('practice');
       var providerSelect = document.getElementById('provider');
       var issue = {
@@ -759,11 +1046,19 @@
       if (!issue.practice) { alert('Practice is required'); return; }
       google.script.run
         .withSuccessHandler(function(result) {
-          google.script.host.close();
           google.script.run
             .withSuccessHandler(function(){})
-            .openWorkflowSidebarByRow(result.row);
-      })
+            .withFailureHandler(function(){})
+            .refreshMetricsQuiet();
+          google.script.run
+            .withSuccessHandler(function(){
+              google.script.host.close();
+            })
+            .withFailureHandler(function(){
+              google.script.host.close();
+            })
+            .openDashboardSidebar();
+        })
         .withFailureHandler(function(error) { alert('Error: ' + error); })
         .logNewIssue(issue);
     }
@@ -782,6 +1077,7 @@
         payerName:       document.getElementById('payer').value || existing.payerName,
         coverageType:    document.getElementById('coverageType').value || existing.coverageType,
         coverageLevel:   document.getElementById('coverageLevel').value || existing.coverageLevel,
+        planType: document.getElementById('planType').value,
         cpt:             document.getElementById('cpt').value,
         dos:             document.getElementById('dos').value,
         accountNumber:   document.getElementById('accountNumberInput').value,
@@ -798,14 +1094,14 @@
         relatedAccounts: getRelatedAccounts()
       };
       google.script.run
-        .withSuccessHandler(function(issueId) {
+        .withSuccessHandler(function() {
           google.script.host.close();
           google.script.run
             .withSuccessHandler(function(){})
             .openDashboardSidebar();
         })
         .withFailureHandler(function(error) { alert('Error: ' + error); })
-        .logNewIssue(issue);
+        .updateIssue(editRow, issue);
     }
   </script>
 </body>

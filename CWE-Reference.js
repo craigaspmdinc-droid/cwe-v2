@@ -400,3 +400,102 @@ function lookupGlobalPeriod(cpt) {
 function getGlobalPeriodForCPT(cpt) {
   return lookupGlobalPeriod(cpt);
 }
+
+function getTestClaimData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Random practice
+  var practices = getPractices();
+  if (!practices.length) return null;
+  var practice = practices[Math.floor(Math.random() * practices.length)];
+
+  // Random provider for that practice
+  var providers = getProvidersByPractice(practice.id);
+  var provider = providers.length ? providers[Math.floor(Math.random() * providers.length)] : null;
+
+  // Random payer for that state
+  var payers = getPayersByState(practice.state);
+  if (!payers.length) payers = getPayersByState('ALL');
+  var payer = payers.length ? payers[Math.floor(Math.random() * payers.length)] : null;
+
+  // Coverage type and plan type from payer
+  var coverageTypes = payer ? getCoverageTypesByPayer(payer.payerName) : [];
+  var coverageType = coverageTypes.length ? coverageTypes[0] : '';
+  var planTypes = coverageType ? getPlanTypesByPayerAndCoverage(payer.payerName, coverageType) : [];
+  var planType = planTypes.length ? planTypes[0] : '';
+
+  // Random CARC code
+  var carcSheet = ss.getSheetByName('REF-CARC');
+  var carcData = carcSheet ? carcSheet.getDataRange().getValues() : [];
+  var carcRows = carcData.filter(function(r) { return r[1] && r[2]; }).slice(1);
+  var carc = carcRows.length ? carcRows[Math.floor(Math.random() * Math.min(carcRows.length, 50))] : null;
+
+  // Denial category
+  var categories = getDenialCategories();
+  var category = categories.length ? categories[Math.floor(Math.random() * categories.length)] : null;
+
+  // Random realistic values
+  var cptCodes = ['99213', '99214', '99215', '97110', '20610', '93000', '71046', '99232'];
+  var cpt = cptCodes[Math.floor(Math.random() * cptCodes.length)];
+  var today = new Date();
+  var dos = new Date(today); dos.setDate(today.getDate() - Math.floor(Math.random() * 90 + 10));
+  var denialDate = new Date(dos); denialDate.setDate(dos.getDate() + Math.floor(Math.random() * 30 + 5));
+  var accountNumber = 'CB' + Math.floor(Math.random() * 9000000 + 1000000) + 'CE';
+  var expectedAmount = (Math.floor(Math.random() * 4500 + 500) / 10) * 10;
+
+  return {
+    practice:          practice.name,
+    practiceId:        practice.id,
+    practiceNPI:       practice.npi,
+    state:             practice.state,
+    provider:          provider ? provider.name : '',
+    providerNPI:       provider ? provider.npi : '',
+    payerName:         payer ? payer.payerName : '',
+    coverageType:      coverageType,
+    planType:          planType,
+    coverageLevel:     'Primary',
+    cpt:               cpt,
+    dos:               Utilities.formatDate(dos, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+    denialRejectionDate: Utilities.formatDate(denialDate, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+    accountNumber:     accountNumber,
+    expectedAmount:    expectedAmount,
+    paidAmount:        0,
+    carcCode:          carc ? String(carc[1]) : '',
+    carcGroupCode:     carc ? String(carc[0]) : '',
+    carcDescription:   carc ? String(carc[2]) : '',
+    denialCategory:    category ? category.name : '',
+    suggestedRootCause: category ? category.rootCause : ''
+  };
+}
+function logTestClaim() {
+  var data = getTestClaimData();
+  if (!data) return null;
+  var issue = {
+    issueType:         'Denial',
+    practice:          data.practice,
+    practiceId:        data.practiceId,
+    practiceNPI:       data.practiceNPI,
+    state:             data.state,
+    provider:          data.provider,
+    providerNPI:       data.providerNPI,
+    payerName:         data.payerName,
+    coverageType:      data.coverageType,
+    planType:          data.planType,
+    coverageLevel:     data.coverageLevel,
+    cpt:               data.cpt,
+    dos:               data.dos,
+    denialRejectionDate: data.denialRejectionDate,
+    accountNumber:     data.accountNumber,
+    expectedAmount:    data.expectedAmount,
+    paidAmount:        0,
+    denialCode:        data.carcCode,
+    denialCodeGroup:   data.carcGroupCode,
+    denialCodeDesc:    data.carcDescription,
+    denialCategory:    data.denialCategory,
+    suggestedRootCause: data.suggestedRootCause,
+    priority:          'Auto',
+    assignedTo:        '',
+    notes:             '🧪 Test claim — auto generated'
+  };
+  return logNewIssue(issue);
+}

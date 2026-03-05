@@ -266,14 +266,23 @@ function getDashboardData() {
       byPriorityCounts:  byPriorityCounts,
       myQueue:           myQueue,
       allQueue:          allQueue,
-      teamMembers:       teamMembers,
-      openRow:           openRow
+      teamMembers:       teamMembers
     };
 
   } catch(e) {
     Logger.log('getDashboardData error: ' + e.message + '\n' + e.stack);
     throw e;
   }
+}
+
+function getAndClearOpenRow() {
+  var cache = CacheService.getUserCache();
+  var storedRow = cache.get('OPEN_ROW_ON_LOAD');
+  if (storedRow) {
+    cache.remove('OPEN_ROW_ON_LOAD');
+    return parseInt(storedRow);
+  }
+  return null;
 }
 
 

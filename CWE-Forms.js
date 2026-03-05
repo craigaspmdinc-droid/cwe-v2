@@ -29,6 +29,7 @@ function showNewIssueForm() {
   template.userOptions = userOptions;
   template.existing = {};
   template.editRow = null;
+  template.userLevel = user.level;
 
   var html = template.evaluate().setWidth(650).setHeight(750);
   SpreadsheetApp.getUi().showModalDialog(html, '➕ Log New Issue');
@@ -60,16 +61,17 @@ function showEditIssueForm(row) {
     denialRejectionDate: data[COL.DENIAL_DATE] ? Utilities.formatDate(new Date(data[COL.DENIAL_DATE]), Session.getScriptTimeZone(), 'yyyy-MM-dd') : '',
     coverageType:        data[COL.COVERAGE_TYPE],
     coverageLevel:       data[COL.COVERAGE_LEVEL],
-    carcCode:            data[COL.ISSUE_DETAILS],
+    carcCode: String(data[COL.ISSUE_DETAILS] || ''),
     carcDescription:     data[COL.CARC_DESCRIPTION],
-    rarcCode:            data[COL.RARC_CODE],
+    rarcCode: String(data[COL.RARC_CODE] || ''),
     rarcDescription:     data[COL.RARC_DESCRIPTION],
     carcGroupCode:       data[COL.CARC_GROUP_CODE],
     assignedTo:          data[COL.ASSIGNED_TO],
     batchId:             data[COL.BATCH_ID],
     state:               data[COL.STATE],
     ptid:                data[COL.PTID],                // ← V2.5
-    relatedAccounts:     data[COL.RELATED_ACCOUNTS]     // ← V2.5
+    relatedAccounts:     data[COL.RELATED_ACCOUNTS],     // ← V2.5
+    planType:            data[COL.PLAN_TYPE]
   };
 
   var practiceOptions = practices.map(function(p) {
@@ -85,6 +87,7 @@ function showEditIssueForm(row) {
   template.userOptions = userOptions;
   template.existing = existing;
   template.editRow = row;
+  template.userLevel = user.level;
 
   var html = template.evaluate().setWidth(650).setHeight(750);
   SpreadsheetApp.getUi().showModalDialog(html, '✏️ Edit Issue');
