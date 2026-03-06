@@ -190,6 +190,7 @@
   <div class="nav-section">
     <div class="nav-section-label">Start Here</div>
     <div class="nav-item active" onclick="show('welcome')" data-page="welcome"><span class="nav-icon">🏠</span>Welcome</div>
+    <div class="nav-item" onclick="show('first-time')" data-page="first-time"><span class="nav-icon">🔑</span>First Time Setup</div>
     <div class="nav-item" onclick="show('overview')" data-page="overview"><span class="nav-icon">📋</span>System Overview</div>
   </div>
   <div class="nav-section">
@@ -247,6 +248,7 @@
     <div class="wc" onclick="show('supervisor')"><div class="wc-icon">👑</div><div class="wc-title">Supervisor Tutorial</div><div class="wc-desc">Queue management, Viewing As, escalation review, and team metrics.</div></div>
     <div class="wc" onclick="show('sim')"><div class="wc-icon">🎮</div><div class="wc-title">Practice Scenarios</div><div class="wc-desc">Work through 8 real claim situations with instant feedback on every decision.</div></div>
   </div>
+  <div class="callout warn"><span class="callout-icon">🔑</span><div><strong>Opening the sheet for the first time?</strong> Google will ask you to authorize the app before the dashboard opens. <span style="cursor:pointer;color:var(--accent);text-decoration:underline;" onclick="show('first-time')">See the First Time Setup guide →</span></div></div>
   <div class="callout info"><span class="callout-icon">💡</span><div>Use the navigation on the left to move between sections. Your progress bar tracks how much you've covered. The quiz at the end requires 80% to pass.</div></div>
   <h4>What's Covered in This Training</h4>
   <div class="card"><ul>
@@ -265,6 +267,42 @@
     <li>25-question knowledge quiz (80% to pass)</li>
     <li>Help, FAQ, and troubleshooting guide</li>
   </ul></div>
+</div>
+
+<!-- FIRST TIME SETUP -->
+<div class="page" id="page-first-time">
+  <div class="page-tag">Start Here</div>
+  <h2>First Time Setup</h2>
+  <p class="subtitle">The first time you open the Claims Workflow Engine, Google requires a one-time authorization before the dashboard will open. This is normal and only happens once.</p>
+  <div class="callout info"><span class="callout-icon">ℹ️</span><div>This is a one-time step. After you've authorized the app, the dashboard will open automatically every time you open the sheet — no further action needed.</div></div>
+  <h4>Step-by-Step Authorization</h4>
+  <div class="steps">
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <div class="step-title">Open the sheet and click <em>Claims Engine</em> in the menu bar</div>
+      <div class="step-desc">The Claims Engine menu appears in the Google Sheets menu bar at the top. Click it, then select <strong>Open Dashboard</strong>. A prompt will appear asking for authorization.</div>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <div class="step-title">Click through the Google authorization screens</div>
+      <div class="step-desc">Google will walk you through a short permission flow. Select your Google account when prompted.</div>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <div class="step-title">If you see a warning — click <strong>Advanced</strong></div>
+      <div class="step-desc">You may see a screen that says <em>"Google hasn't verified this app."</em> This is expected for internal tools and does not mean anything is wrong. Click <strong>Advanced</strong>, then click <strong>Go to Claims Workflow Engine V2.5 (unsafe)</strong>.</div>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <div class="step-title">Click <strong>Continue</strong></div>
+      <div class="step-desc">A confirmation screen will appear. Click <strong>Continue</strong> to proceed to the permissions screen.</div>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <div class="step-title">Grant permissions and click <strong>Continue</strong></div>
+      <div class="step-desc">You'll see a screen that says <em>"Claims Workflow Engine V2.5 wants access to your Google Account."</em> Check the <strong>Select All</strong> checkbox to grant all required permissions, then click <strong>Continue</strong>.</div>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <div class="step-title">Dashboard opens — you're all set</div>
+      <div class="step-desc">The sidebar dashboard will open automatically. From this point forward, the dashboard will open on its own every time you open the sheet. You will not need to repeat these steps.</div>
+    </div></div>
+  </div>
+  <div class="callout warn"><span class="callout-icon">⚠️</span><div>The <em>"Google hasn't verified this app"</em> warning sounds alarming but is standard for all internal Google Workspace tools. It simply means the app hasn't gone through Google's public app review process — not that anything is unsafe. If you have questions, contact your supervisor before proceeding.</div></div>
 </div>
 
 <!-- OVERVIEW -->
