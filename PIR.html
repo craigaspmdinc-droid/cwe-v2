@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practice Intelligence Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#0f1923; --ink2:#2c3e50; --muted:#7f8c9a; --rule:#dde3ea;
+    --bg:#f4f6f9; --surface:#ffffff;
+    --accent:#1a56db; --accent-light:#e8f0fe;
+    --green:#0d7a4e; --green-light:#e6f7f1;
+    --amber:#92560a; --amber-light:#fef3e2;
+    --red:#b91c1c; --red-light:#fef2f2;
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --mono:'DM Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.6;font-size:13px;}
+
+  /* ── HEADER ── */
+  .rh{background:var(--ink);color:white;padding:36px 48px 32px;position:relative;overflow:hidden;}
+  .rh::before{content:'';position:absolute;top:-50px;right:-50px;width:280px;height:280px;border-radius:50%;background:rgba(26,86,219,.15);}
+  .rh::after{content:'';position:absolute;bottom:-70px;right:160px;width:170px;height:170px;border-radius:50%;background:rgba(26,86,219,.08);}
+  .rh-meta{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+  .rh-title{font-family:var(--serif);font-size:36px;line-height:1.1;margin-bottom:6px;position:relative;z-index:1;}
+  .rh-sub{font-size:14px;color:rgba(255,255,255,.55);margin-bottom:28px;font-weight:300;}
+  .hstats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden;position:relative;z-index:1;}
+  .hs{background:rgba(255,255,255,.06);padding:16px 20px;transition:background .2s;}
+  .hs:hover{background:rgba(255,255,255,.1);}
+  .hs-val{font-family:var(--serif);font-size:28px;line-height:1;margin-bottom:3px;}
+  .hs-val.g{color:#4ade80;} .hs-val.a{color:#fbbf24;} .hs-val.r{color:#f87171;}
+  .hs-lbl{font-size:10px;color:rgba(255,255,255,.4);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;}
+
+  /* ── LAYOUT ── */
+  .rb{max-width:1060px;margin:0 auto;padding:32px 32px 64px;}
+
+  /* ── SECTION ── */
+  .sec{margin-bottom:36px;}
+  .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid var(--ink);}
+  .sn{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;}
+  .st{font-family:var(--serif);font-size:20px;color:var(--ink);font-weight:400;}
+  .sb{margin-left:auto;font-family:var(--mono);font-size:10px;background:var(--accent-light);color:var(--accent);padding:2px 9px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase;}
+
+  /* ── GRIDS ── */
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+
+  /* ── CARDS ── */
+  .card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px 20px;}
+  .cl{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;}
+  .cv{font-family:var(--serif);font-size:26px;color:var(--ink);line-height:1;margin-bottom:3px;}
+  .cs{font-size:12px;color:var(--muted);}
+  .cd{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:500;margin-top:5px;}
+  .cd.up{color:var(--green);} .cd.dn{color:var(--red);} .cd.nu{color:var(--muted);}
+
+  /* ── PROFILE GRID ── */
+  .pgrid{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--surface);border:1px solid var(--rule);border-radius:10px;overflow:hidden;}
+  .pi{padding:16px 20px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+  .pi:nth-child(3n){border-right:none;}
+  .pi:nth-last-child(-n+3){border-bottom:none;}
+  .pil{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
+  .piv{font-size:13px;color:var(--ink);font-weight:500;}
+  .piv.ac{color:var(--accent);}
+
+  /* ── BAR CHARTS ── */
+  .bl{display:flex;flex-direction:column;gap:9px;}
+  .br{display:flex;flex-direction:column;gap:3px;}
+  .bm{display:flex;justify-content:space-between;align-items:baseline;}
+  .blab{font-size:12px;color:var(--ink2);font-weight:500;}
+  .bval{font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .btr{height:7px;background:var(--bg);border-radius:4px;overflow:hidden;}
+  .bf{height:100%;border-radius:4px;}
+  .bf.bl2{background:var(--accent);}
+  .bf.gn{background:#10b981;}
+  .bf.am{background:#f59e0b;}
+  .bf.rd{background:#ef4444;}
+  .bf.pu{background:#8b5cf6;}
+
+  /* ── TABLE ── */
+  .dt{width:100%;border-collapse:collapse;}
+  .dt th{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:left;padding:7px 12px;border-bottom:2px solid var(--rule);background:var(--bg);}
+  .dt td{font-size:12px;padding:10px 12px;border-bottom:1px solid var(--rule);color:var(--ink2);}
+  .dt tr:last-child td{border-bottom:none;}
+  .dt tr:hover td{background:#f9fafb;}
+  .nm{font-family:var(--mono);font-size:11px;}
+
+  /* ── PILLS ── */
+  .pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;font-family:var(--mono);}
+  .pill.gn{background:var(--green-light);color:var(--green);}
+  .pill.am{background:var(--amber-light);color:var(--amber);}
+  .pill.rd{background:var(--red-light);color:var(--red);}
+  .pill.bl{background:var(--accent-light);color:var(--accent);}
+
+  /* ── ALERTS ── */
+  .ac{border-radius:9px;padding:13px 16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:9px;}
+  .ac.warn{background:var(--amber-light);border-left:3px solid #f59e0b;}
+  .ac.danger{background:var(--red-light);border-left:3px solid #ef4444;}
+  .ac.ok{background:var(--green-light);border-left:3px solid #10b981;}
+  .ac-ico{font-size:16px;line-height:1.4;}
+  .ac-title{font-size:13px;font-weight:600;margin-bottom:2px;}
+  .ac-body{font-size:12px;color:var(--ink2);line-height:1.5;}
+
+  /* ── OPS NOTES ── */
+  .on{background:var(--surface);border:1px solid var(--rule);border-radius:9px;padding:14px 18px;margin-bottom:9px;display:flex;gap:12px;}
+  .on-tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:white;background:var(--ink);padding:3px 7px;border-radius:4px;white-space:nowrap;height:fit-content;margin-top:1px;}
+  .on-text{font-size:12px;color:var(--ink2);line-height:1.6;}
+
+  /* ── TIMELINE ── */
+  .tl{display:flex;}
+  .ts{flex:1;text-align:center;position:relative;}
+  .ts::after{content:'';position:absolute;top:19px;right:-1px;width:2px;height:16px;background:var(--rule);}
+  .ts:last-child::after{display:none;}
+  .td{width:38px;height:38px;border-radius:50%;background:var(--bg);border:2px solid var(--rule);display:flex;align-items:center;justify-content:center;margin:0 auto 7px;font-size:14px;}
+  .td.done{background:var(--accent-light);border-color:var(--accent);}
+  .tv{font-family:var(--serif);font-size:18px;margin-bottom:1px;}
+  .tlab{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;}
+
+  /* ── DONUT ── */
+  .dw{display:flex;align-items:center;gap:24px;}
+  .dl{display:flex;flex-direction:column;gap:7px;}
+  .li{display:flex;align-items:center;gap:7px;font-size:12px;}
+  .ld{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+  /* ── SPARKLINE ── */
+  .spl{padding:6px 0 0;}
+  .splabs{display:flex;justify-content:space-between;margin-top:5px;}
+  .splab{font-family:var(--mono);font-size:10px;color:var(--muted);}
+
+  /* ── FOOTER ── */
+  .rf{background:var(--ink);color:rgba(255,255,255,.4);padding:20px 48px;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.5px;}
+  .rf-brand{color:rgba(255,255,255,.7);font-weight:500;}
+
+  /* ── EMPTY STATE ── */
+  .empty{text-align:center;padding:24px;color:var(--muted);font-family:var(--mono);font-size:11px;background:var(--bg);border-radius:8px;}
+</style>
+</head>
+<body>
+<script>
+  // Injected by Apps Script template engine
+  var D = <?= reportDataJson ?>;
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+  function pct(n, max) {
+    return Math.min(100, Math.round((n / Math.max(max, 1)) * 100)) + '%';
+  }
+  function barFillClass(i) {
+    return ['bl2','gn','am','rd','pu','bl2'][i % 6];
+  }
+
+  // ── Build bar list ────────────────────────────────────────────────
+  function buildBarList(items, labelFn, valFn, maxVal, colorFn) {
+    var wrap = el('div', 'bl');
+    items.forEach(function(item, i) {
+      var row  = el('div', 'br');
+      var meta = el('div', 'bm');
+      meta.appendChild(el('span', 'blab', labelFn(item)));
+      meta.appendChild(el('span', 'bval', valFn(item)));
+      var track = el('div', 'btr');
+      var fill  = el('div', 'bf ' + (colorFn ? colorFn(item, i) : barFillClass(i)));
+      fill.style.width = pct(typeof maxVal === 'function' ? maxVal(item) : item.val || item.count || 0,
+                              typeof maxVal === 'function' ? 100 : maxVal);
+      track.appendChild(fill);
+      row.appendChild(meta);
+      row.appendChild(track);
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+
+  // ── Render on load ────────────────────────────────────────────────
+  window.addEventListener('load', function() {
+    renderHeader();
+    renderProfile();
+    renderVolume();
+    renderCPT();
+    renderDenials();
+    renderPayers();
+    renderResolution();
+    renderFinancial();
+    renderEscalation();
+    renderAlerts();
+    renderOpsNotes();
+    renderFooter();
+  });
+
+  // ── 1. Header ─────────────────────────────────────────────────────
+  function renderHeader() {
+    document.getElementById('rh-meta').textContent =
+      'Claims Workflow Engine V2.5  ·  Practice Intelligence Report  ·  Generated ' + D.profile.generatedAt;
+    document.getElementById('rh-title').textContent = D.profile.name;
+    document.getElementById('rh-sub').textContent =
+      D.profile.reportPeriod + '  ·  Active ' + D.profile.totalMonths + ' months';
+
+    document.getElementById('hs-claims').textContent = D.volume.total;
+    document.getElementById('hs-recovery').textContent = D.financial.recoveryRate + '%';
+    document.getElementById('hs-exposure').textContent = D.financial.openExposure;
+    document.getElementById('hs-open').textContent = D.financial.openCount;
+  }
+
+  // ── 2. Practice Profile ───────────────────────────────────────────
+  function renderProfile() {
+    var items = [
+      { label: 'Providers',     value: D.profile.providers },
+      { label: 'Primary Payers', value: D.profile.payers },
+      { label: 'Active Since',   value: D.profile.activeSince },
+      { label: 'CPT Codes Used', value: D.profile.cptCount + ' codes' },
+      { label: 'Report Period',  value: D.profile.reportPeriod },
+      { label: 'Total Claims',   value: D.volume.total + ' (' + D.volume.monthlyAvg + '/mo avg)' }
+    ];
+    var grid = document.getElementById('profile-grid');
+    items.forEach(function(item) {
+      var div = el('div', 'pi');
+      div.appendChild(el('div', 'pil', item.label));
+      div.appendChild(el('div', 'piv', item.value));
+      grid.appendChild(div);
+    });
+  }
+
+  // ── 3. Volume ─────────────────────────────────────────────────────
+  function renderVolume() {
+    // Donut legend
+    var colors = ['#1a56db','#ef4444','#f59e0b','#10b981','#8b5cf6'];
+    var leg = document.getElementById('donut-legend');
+    D.volume.byType.forEach(function(t, i) {
+      var li = el('div', 'li');
+      var dot = el('div', 'ld');
+      dot.style.background = colors[i % colors.length];
+      li.appendChild(dot);
+      li.appendChild(document.createTextNode(t.type + ' — ' + t.count + ' (' + t.pct + '%)'));
+      leg.appendChild(li);
+    });
+
+    // Sparkline labels
+    var keys = Object.keys(D.volume.monthCounts);
+    if (keys.length > 1) {
+      var first = keys[0];
+      var last  = keys[keys.length - 1];
+      document.getElementById('spark-first').textContent = first;
+      document.getElementById('spark-last').textContent  = last;
+    }
+
+    document.getElementById('vol-avg').textContent  = D.volume.monthlyAvg;
+    document.getElementById('vol-peak').textContent = D.volume.peakMonth;
+  }
+
+  // ── 4. CPT Table ──────────────────────────────────────────────────
+  function renderCPT() {
+    var tbody = document.getElementById('cpt-tbody');
+    if (!D.cptStats || !D.cptStats.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty">No CPT data available</div></td></tr>';
+      return;
+    }
+    D.cptStats.forEach(function(c) {
+      var tr = el('tr');
+      var flagIcon = c.flag === 'danger' ? ' 🚨' : c.flag === 'warn' ? ' ⚠️' : '';
+
+      tr.appendChild(tdPill(c.cpt, 'bl'));
+      tr.appendChild(el('td', '', c.claims + flagIcon));
+      // Denial rate cell with inline bar
+      var drTd = document.createElement('td');
+      var drWrap = el('div', '', '');
+      drWrap.style.cssText = 'display:flex;align-items:center;gap:7px;';
+      var track = el('div', 'btr'); track.style.width = '50px';
+      var fill  = el('div', 'bf ' + (c.denialRate >= 45 ? 'rd' : c.denialRate >= 30 ? 'am' : 'gn'));
+      fill.style.width = c.denialRate + '%';
+      track.appendChild(fill);
+      var numSpan = el('span', 'nm', c.denialRate + '%');
+      if (c.denialRate >= 45) numSpan.style.color = 'var(--red)';
+      else if (c.denialRate >= 30) numSpan.style.color = 'var(--amber)';
+      drWrap.appendChild(track);
+      drWrap.appendChild(numSpan);
+      drTd.appendChild(drWrap);
+      tr.appendChild(drTd);
+
+      tr.appendChild(el('td', 'nm', c.avgBilled));
+      tr.appendChild(tdPill(c.recovRate + '%', c.recovRate >= 80 ? 'gn' : c.recovRate >= 65 ? 'am' : 'rd'));
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ── 5. Denials ────────────────────────────────────────────────────
+  function renderDenials() {
+    var maxVol = D.denials.byVolume.length ? D.denials.byVolume[0].val : 1;
+    var bv = buildBarList(D.denials.byVolume,
+      function(i) { return i.key || '(blank)'; },
+      function(i) { return i.val + ' claims'; },
+      maxVol,
+      function(item, idx) { return barFillClass(idx); }
+    );
+    document.getElementById('denial-vol').appendChild(bv);
+
+    var bd = buildBarList(D.denials.byDollar,
+      function(i) { return i.key || '(blank)'; },
+      function(i) { return i.val; },
+      100,
+      function(item, idx) { return ['rd','am','bl2','pu','gn','bl2'][idx]; }
+    );
+    // Dollar bars use rank-based widths
+    var dollarItems = D.denials.byDollar;
+    if (dollarItems.length) {
+      var dollarBars = bd.querySelectorAll('.bf');
+      dollarBars.forEach(function(bar, i) {
+        bar.style.width = Math.round(100 - (i * (100 / dollarItems.length))) + '%';
+      });
+    }
+    document.getElementById('denial-dollar').appendChild(bd);
+  }
+
+  // ── 6. Payer Table ────────────────────────────────────────────────
+  function renderPayers() {
+    var tbody = document.getElementById('payer-tbody');
+    if (!D.payerStats || !D.payerStats.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty">No payer data available</div></td></tr>';
+      return;
+    }
+    D.payerStats.forEach(function(p) {
+      var tr = el('tr');
+      tr.appendChild(el('td', '', '<strong>' + p.payer + '</strong>'));
+      tr.appendChild(el('td', 'nm', p.claims));
+      tr.appendChild(tdPill(p.denialRate + '%', p.denRateFlag === 'red' ? 'rd' : p.denRateFlag === 'amber' ? 'am' : 'gn'));
+      tr.appendChild(el('td', 'nm', p.avgDays));
+      tr.appendChild(el('td', '', p.topDenial || '—'));
+      tr.appendChild(el('td', 'nm', p.recovRate + '%'));
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ── 7. Resolution ─────────────────────────────────────────────────
+  function renderResolution() {
+    var tl = document.getElementById('resolution-tl');
+    var icons = { 'Denial':'🚫', 'Rejection':'↩️', 'Payment':'💰', 'Internal':'🏢' };
+    D.resolution.byType.forEach(function(t) {
+      var step = el('div', 'ts');
+      var dot  = el('div', 'td done', icons[t.type] || '📋');
+      var val  = el('div', 'tv', t.avgDays + 'd');
+      var lab  = el('div', 'tlab', t.type);
+      step.appendChild(dot);
+      step.appendChild(val);
+      step.appendChild(lab);
+      tl.appendChild(step);
+    });
+    if (!D.resolution.byType.length) {
+      tl.innerHTML = '<div class="empty">No resolved claims data yet</div>';
+    }
+
+    var maxAct = D.resolution.topActions.length ? D.resolution.topActions[0].pct : 1;
+    var actBars = buildBarList(D.resolution.topActions,
+      function(i) { return i.action || '(none)'; },
+      function(i) { return i.pct + '%'; },
+      maxAct,
+      function(item, idx) { return barFillClass(idx); }
+    );
+    document.getElementById('resolution-actions').appendChild(actBars);
+  }
+
+  // ── 8. Financial ──────────────────────────────────────────────────
+  function renderFinancial() {
+    document.getElementById('fin-billed').textContent    = D.financial.totalBilled;
+    document.getElementById('fin-recovered').textContent = D.financial.totalRecovered;
+    document.getElementById('fin-exposure').textContent  = D.financial.openExposure;
+    document.getElementById('fin-writeoff').textContent  = D.financial.writeOffTotal;
+    document.getElementById('fin-rate').textContent      = D.financial.recoveryRate + '%';
+    document.getElementById('fin-open').textContent      = D.financial.openCount + ' open claims';
+  }
+
+  // ── 9. Escalation ─────────────────────────────────────────────────
+  function renderEscalation() {
+    document.getElementById('esc-count').textContent   = D.escalation.count;
+    document.getElementById('esc-rate').textContent    = D.escalation.count + ' of ' + D.volume.total + ' claims escalated';
+    document.getElementById('esc-days').textContent    = D.escalation.avgResolveDays !== null ? D.escalation.avgResolveDays + 'd' : '—';
+    document.getElementById('esc-reason').textContent  = D.escalation.topReason || '—';
+  }
+
+  // ── 10. Alerts ────────────────────────────────────────────────────
+  function renderAlerts() {
+    var wrap = document.getElementById('alerts-wrap');
+    if (!D.alerts || !D.alerts.length) {
+      wrap.innerHTML = '<div class="ac ok"><div class="ac-ico">✅</div><div><div class="ac-title">No alerts detected</div><div class="ac-body">All CPT codes and payers are performing within expected ranges.</div></div></div>';
+      return;
+    }
+    D.alerts.forEach(function(a) {
+      var icon = a.level === 'danger' ? '🚨' : a.level === 'warn' ? '⚠️' : '✅';
+      var div  = el('div', 'ac ' + a.level);
+      div.innerHTML = '<div class="ac-ico">' + icon + '</div>' +
+        '<div><div class="ac-title">' + a.title + '</div>' +
+        '<div class="ac-body">' + a.body + '</div></div>';
+      wrap.appendChild(div);
+    });
+  }
+
+  // ── 11. Ops Notes ─────────────────────────────────────────────────
+  function renderOpsNotes() {
+    var wrap = document.getElementById('ops-wrap');
+    // Always show practice guide link
+    var guideNote = el('div', 'on');
+    guideNote.innerHTML = '<div class="on-tag">Practice Guide</div>' +
+      '<div class="on-text" style="color:var(--accent);">📋 ' + D.profile.name +
+      ' — Open the linked practice guide for full operational instructions, billing system steps, and provider-specific rules.</div>';
+    wrap.appendChild(guideNote);
+
+    // Auto-detected notes
+    if (D.opsNotes && D.opsNotes.length) {
+      D.opsNotes.forEach(function(note) {
+        var div = el('div', 'on');
+        div.innerHTML = '<div class="on-tag">' + note.tag + '</div>' +
+          '<div class="on-text">' + note.text + '</div>';
+        wrap.appendChild(div);
+      });
+    } else {
+      var empty = el('div', 'on');
+      empty.innerHTML = '<div class="on-tag">Status</div>' +
+        '<div class="on-text">No auto-detected operational patterns. All activity appears within normal parameters.</div>';
+      wrap.appendChild(empty);
+    }
+  }
+
+  // ── Footer ────────────────────────────────────────────────────────
+  function renderFooter() {
+    document.getElementById('footer-practice').textContent =
+      D.profile.name + '  ·  Generated ' + D.profile.generatedAt + '  ·  Confidential — Internal Use Only';
+  }
+
+  // ── Helper: pill TD ───────────────────────────────────────────────
+  function tdPill(text, cls) {
+    var td   = document.createElement('td');
+    var span = el('span', 'pill ' + cls, text);
+    td.appendChild(span);
+    return td;
+  }
+</script>
+
+<!-- ══ HEADER ══ -->
+<div class="rh">
+  <div class="rh-meta" id="rh-meta"></div>
+  <div class="rh-title" id="rh-title"></div>
+  <div class="rh-sub" id="rh-sub"></div>
+  <div class="hstats">
+    <div class="hs"><div class="hs-val" id="hs-claims">—</div><div class="hs-lbl">Claims This Period</div></div>
+    <div class="hs"><div class="hs-val g" id="hs-recovery">—</div><div class="hs-lbl">Recovery Rate</div></div>
+    <div class="hs"><div class="hs-val a" id="hs-exposure">—</div><div class="hs-lbl">Open Exposure</div></div>
+    <div class="hs"><div class="hs-val r" id="hs-open">—</div><div class="hs-lbl">Open Claims</div></div>
+  </div>
+</div>
+
+<!-- ══ BODY ══ -->
+<div class="rb">
+
+  <!-- ① PROFILE -->
+  <div class="sec">
+    <div class="sh"><span class="sn">01</span><span class="st">Practice Profile</span></div>
+    <div class="pgrid" id="profile-grid"></div>
+  </div>
+
+  <!-- ② VOLUME -->
+  <div class="sec">
+    <div class="sh"><span class="sn">02</span><span class="st">Claim Volume & Type Breakdown</span></div>
+    <div class="g2">
+      <div class="card">
+        <div class="cl">By Claim Type</div>
+        <div class="dw" style="margin-top:12px;">
+          <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="42" fill="none" stroke="#e2e8f0" stroke-width="18"/>
+            <text x="55" y="51" text-anchor="middle" font-family="DM Serif Display" font-size="18" fill="#0f1923" id="donut-total"></text>
+            <text x="55" y="64" text-anchor="middle" font-family="DM Mono" font-size="8" fill="#7f8c9a">CLAIMS</text>
+          </svg>
+          <div class="dl" id="donut-legend"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cl">Monthly Volume Trend</div>
+        <div class="spl" style="margin-top:10px;">
+          <svg width="100%" height="72" viewBox="0 0 400 72" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1a56db" stop-opacity="0.2"/>
+                <stop offset="100%" stop-color="#1a56db" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,52 L50,46 L100,49 L150,36 L200,40 L250,28 L300,32 L350,20 L400,14 L400,72 L0,72 Z" fill="url(#sg)"/>
+            <path d="M0,52 L50,46 L100,49 L150,36 L200,40 L250,28 L300,32 L350,20 L400,14" fill="none" stroke="#1a56db" stroke-width="2.5" stroke-linejoin="round"/>
+            <circle cx="400" cy="14" r="4" fill="#1a56db"/>
+          </svg>
+          <div class="splabs">
+            <span class="splab" id="spark-first">—</span>
+            <span class="splab" id="spark-last">—</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:14px;padding-top:12px;border-top:1px solid var(--rule);">
+          <div><div class="cl">Monthly Avg</div><div style="font-family:var(--serif);font-size:20px;" id="vol-avg">—</div></div>
+          <div><div class="cl">Peak Month</div><div style="font-family:var(--serif);font-size:20px;" id="vol-peak">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ CPT -->
+  <div class="sec">
+    <div class="sh"><span class="sn">03</span><span class="st">CPT Codes — Volume & Denial Rate</span></div>
+    <div class="card">
+      <table class="dt">
+        <thead><tr>
+          <th>CPT</th><th>Claims</th><th>Denial Rate</th><th>Avg Billed</th><th>Recovery Rate</th>
+        </tr></thead>
+        <tbody id="cpt-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ④ DENIALS -->
+  <div class="sec">
+    <div class="sh">
+      <span class="sn">04</span><span class="st">Top Denial Reasons</span>
+      <span class="sb" id="denial-badge"></span>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="cl" style="margin-bottom:12px;">By Volume</div>
+        <div id="denial-vol"></div>
+      </div>
+      <div class="card">
+        <div class="cl" style="margin-bottom:12px;">By Dollar Impact</div>
+        <div id="denial-dollar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ PAYERS -->
+  <div class="sec">
+    <div class="sh"><span class="sn">05</span><span class="st">Payer Performance</span></div>
+    <div class="card">
+      <table class="dt">
+        <thead><tr>
+          <th>Payer</th><th>Claims</th><th>Denial Rate</th><th>Avg Days to Resolve</th><th>Top Denial</th><th>Recovery Rate</th>
+        </tr></thead>
+        <tbody id="payer-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ⑥ RESOLUTION -->
+  <div class="sec">
+    <div class="sh"><span class="sn">06</span><span class="st">Resolution Patterns</span></div>
+    <div class="g2">
+      <div class="card">
+        <div class="cl" style="margin-bottom:14px;">Avg Days NEW → RESOLVED by Type</div>
+        <div class="tl" id="resolution-tl"></div>
+      </div>
+      <div class="card">
+        <div class="cl" style="margin-bottom:12px;">Top Resolution Pathways</div>
+        <div id="resolution-actions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ FINANCIAL -->
+  <div class="sec">
+    <div class="sh"><span class="sn">07</span><span class="st">Financial Summary</span></div>
+    <div class="g4">
+      <div class="card">
+        <div class="cl">Total Billed</div>
+        <div class="cv" id="fin-billed">—</div>
+      </div>
+      <div class="card">
+        <div class="cl">Total Recovered</div>
+        <div class="cv" style="color:var(--green)" id="fin-recovered">—</div>
+        <div class="cd up" id="fin-rate">—</div>
+      </div>
+      <div class="card">
+        <div class="cl">Open Exposure</div>
+        <div class="cv" style="color:var(--amber)" id="fin-exposure">—</div>
+        <div class="cs" id="fin-open">—</div>
+      </div>
+      <div class="card">
+        <div class="cl">Write-Offs</div>
+        <div class="cv" style="color:var(--red)" id="fin-writeoff">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ ESCALATION -->
+  <div class="sec">
+    <div class="sh"><span class="sn">08</span><span class="st">Escalation Profile</span></div>
+    <div class="g3">
+      <div class="card">
+        <div class="cl">Escalated Claims</div>
+        <div class="cv" id="esc-count">—</div>
+        <div class="cs" id="esc-rate">—</div>
+      </div>
+      <div class="card">
+        <div class="cl">Avg Days to Resolve (Critical/High)</div>
+        <div class="cv" id="esc-days">—</div>
+      </div>
+      <div class="card">
+        <div class="cl">Top Escalation Reason</div>
+        <div class="cv" style="font-size:16px;margin-top:4px;" id="esc-reason">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑨ ALERTS -->
+  <div class="sec">
+    <div class="sh"><span class="sn">09</span><span class="st">Coding Alerts</span></div>
+    <div id="alerts-wrap"></div>
+  </div>
+
+  <!-- ⑩ OPS NOTES -->
+  <div class="sec">
+    <div class="sh"><span class="sn">10</span><span class="st">Operational Notes</span></div>
+    <div id="ops-wrap"></div>
+  </div>
+
+</div><!-- end .rb -->
+
+<!-- ══ FOOTER ══ -->
+<div class="rf">
+  <span class="rf-brand">Claims Workflow Engine V2.5</span>
+  <span id="footer-practice"></span>
+</div>
+
+<script>
+  // Set donut total after load
+  window.addEventListener('load', function() {
+    var t = document.getElementById('donut-total');
+    if (t) t.textContent = D.volume.total;
+    var db = document.getElementById('denial-badge');
+    if (db) db.textContent = D.denials.total + ' denials total';
+  });
+</script>
+</body>
+</html>
